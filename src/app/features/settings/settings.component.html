@@ -1,0 +1,724 @@
+<app-page-header
+  title="Sistem Ayarları"
+  subtitle="Kategoriler, hesap planı, firma ve kullanıcı yönetimi"
+/>
+
+@if (!isSuperAdmin()) {
+  <div class="access-denied">
+    <span class="access-denied__icon">&#128274;</span>
+    <h3>Erişim Reddedildi</h3>
+    <p>Bu sayfaya erişmek için süper admin yetkisi gereklidir.</p>
+  </div>
+} @else {
+
+  <!-- Tab Bar -->
+  <div class="settings-tabs">
+    <button
+      class="settings-tabs__tab"
+      [class.settings-tabs__tab--active]="activeTab() === 'tenants'"
+      (click)="setTab('tenants')"
+    >
+      <span class="tab-icon material-icons" style="font-size:16px">domain</span> Tenantlar
+    </button>
+    <button
+      class="settings-tabs__tab"
+      [class.settings-tabs__tab--active]="activeTab() === 'categories'"
+      (click)="setTab('categories')"
+    >
+      <span class="tab-icon">&#9776;</span> Kategoriler
+    </button>
+    <button
+      class="settings-tabs__tab"
+      [class.settings-tabs__tab--active]="activeTab() === 'chart'"
+      (click)="setTab('chart')"
+    >
+      <span class="tab-icon">&#128196;</span> Hesap Planı
+    </button>
+    <button
+      class="settings-tabs__tab"
+      [class.settings-tabs__tab--active]="activeTab() === 'firms'"
+      (click)="setTab('firms')"
+    >
+      <span class="tab-icon">&#127970;</span> Firma Yönetimi
+    </button>
+    <button
+      class="settings-tabs__tab"
+      [class.settings-tabs__tab--active]="activeTab() === 'users'"
+      (click)="setTab('users')"
+    >
+      <span class="tab-icon">&#128100;</span> Kullanıcılar
+    </button>
+  </div>
+
+  <!-- ───────────────────────── TAB: TENANTS ──────────────────────────────── -->
+  @if (activeTab() === 'tenants') {
+    <div class="settings-panel">
+
+      <!-- Add/Edit Form -->
+      @if (showTenantForm()) {
+        <div class="form-card">
+          <h3 class="form-card__title">{{ tenantEditingId() ? 'Tenant Düzenle' : 'Yeni Tenant Ekle' }}</h3>
+          <form [formGroup]="tenantForm" (ngSubmit)="saveTenant()">
+            <div class="form-row">
+              <div class="form-field form-field--grow">
+                <label>Tenant Adı</label>
+                <input type="text" formControlName="name" placeholder="Örn: ON7 Group" class="form-input" />
+              </div>
+              <div class="form-field">
+                <label>Vergi No</label>
+                <input type="text" formControlName="tax_no" placeholder="1234567890" class="form-input" />
+              </div>
+              <div class="form-field">
+                <label>Plan</label>
+                <select formControlName="plan" class="form-select">
+                  @for (p of planOptions; track p) {
+                    <option [value]="p">{{ planLabels[p] }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Durum</label>
+                <select formControlName="status" class="form-select">
+                  @for (s of statusOptions; track s) {
+                    <option [value]="s">{{ statusLabels[s] }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn--primary" [disabled]="saving()">
+                {{ tenantEditingId() ? 'Güncelle' : 'Oluştur' }}
+              </button>
+              <button type="button" class="btn btn--secondary" (click)="cancelTenantEdit()">İptal</button>
+            </div>
+          </form>
+        </div>
+      }
+
+      <!-- Header + Add Button -->
+      <div class="section-header">
+        <h3>Tenant Listesi</h3>
+        @if (!showTenantForm()) {
+          <button class="btn btn--primary" (click)="openNewTenant()">
+            <span class="material-icons" style="font-size:16px">add</span> Yeni Tenant
+          </button>
+        }
+      </div>
+
+      @if (loading()) {
+        <div class="loading-spinner"><div class="spinner"></div></div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Tenant Adı</th>
+                <th>Vergi No</th>
+                <th>Plan</th>
+                <th>Durum</th>
+                <th>Oluşturulma</th>
+                <th>İşlemler</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (tenant of tenants(); track tenant.id) {
+                <tr>
+                  <td>
+                    <strong>{{ tenant.name }}</strong>
+                  </td>
+                  <td>{{ tenant.tax_no || '—' }}</td>
+                  <td>
+                    <span class="badge badge--plan badge--plan-{{ tenant.plan }}">
+                      {{ planLabels[tenant.plan] }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge badge--status badge--status-{{ tenant.status }}">
+                      {{ statusLabels[tenant.status] }}
+                    </span>
+                  </td>
+                  <td>{{ tenant.created_at | date:'dd.MM.yyyy' }}</td>
+                  <td>
+                    <button class="action-btn" (click)="selectTenantInTopbar(tenant)" title="Bu tenanta geç">
+                      <span class="material-icons">swap_horiz</span>
+                    </button>
+                    <button class="action-btn" (click)="editTenant(tenant)" title="Düzenle">
+                      <span class="material-icons">edit</span>
+                    </button>
+                    <button class="action-btn action-btn--danger" (click)="confirmDeleteTenant(tenant.id)" title="Sil">
+                      <span class="material-icons">delete</span>
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6" class="empty-row">Henüz tenant eklenmemiş.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ───────────────────────── TAB: CATEGORIES ───────────────────────────── -->
+  @if (activeTab() === 'categories') {
+    <div class="settings-panel">
+
+      <!-- Form Card -->
+      <div class="form-card">
+        <h3 class="form-card__title">{{ catEditingId() ? 'Kategori Düzenle' : 'Yeni Kategori Ekle' }}</h3>
+        <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()" class="inline-form">
+          <div class="inline-form__field">
+            <label class="form-label">Tip</label>
+            <select formControlName="type" class="form-select">
+              <option value="GELIR">Gelir</option>
+              <option value="GIDER">Gider</option>
+            </select>
+          </div>
+          <div class="inline-form__field inline-form__field--grow">
+            <label class="form-label">Kategori Adı <span class="required">*</span></label>
+            <input
+              type="text"
+              formControlName="name"
+              class="form-input"
+              [class.form-input--invalid]="categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched"
+              placeholder="Örn: Konaklama Geliri"
+            />
+          </div>
+          <div class="inline-form__field">
+            <label class="form-label">Varsayılan Vade (Gün)</label>
+            <input
+              type="number"
+              formControlName="default_payment_term_days"
+              class="form-input form-input--narrow"
+              min="0"
+            />
+          </div>
+          <div class="inline-form__field">
+            <label class="form-label">Aktif</label>
+            <label class="toggle">
+              <input type="checkbox" formControlName="is_active" />
+              <span class="toggle__track"></span>
+            </label>
+          </div>
+          <div class="inline-form__actions">
+            <button type="submit" class="btn btn--primary" [disabled]="saving()">
+              @if (saving()) { <span class="spinner spinner--sm"></span> }
+              {{ catEditingId() ? 'Güncelle' : 'Ekle' }}
+            </button>
+            @if (catEditingId()) {
+              <button type="button" class="btn btn--outline" (click)="cancelCatEdit()">İptal</button>
+            }
+          </div>
+        </form>
+      </div>
+
+      <!-- Filter -->
+      <div class="filter-row">
+        <div class="filter-pills">
+          <button class="filter-pill" [class.filter-pill--active]="catFilterType() === 'ALL'" (click)="catFilterType.set('ALL')">Tümü</button>
+          <button class="filter-pill filter-pill--gelir" [class.filter-pill--active]="catFilterType() === 'GELIR'" (click)="catFilterType.set('GELIR')">Gelir</button>
+          <button class="filter-pill filter-pill--gider" [class.filter-pill--active]="catFilterType() === 'GIDER'" (click)="catFilterType.set('GIDER')">Gider</button>
+        </div>
+        <span class="record-count">{{ filteredCategories().length }} kayıt</span>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrapper">
+        @if (loading()) {
+          <div class="loading-state"><div class="spinner"></div><span>Yükleniyor...</span></div>
+        } @else {
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Tip</th>
+                <th>Kategori Adı</th>
+                <th>Varsayılan Vade</th>
+                <th>Aktif</th>
+                <th class="col-actions">İşlemler</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (cat of filteredCategories(); track cat.id) {
+                <tr>
+                  <td>
+                    <span class="type-badge" [class.type-badge--gelir]="cat.type === 'GELIR'" [class.type-badge--gider]="cat.type === 'GIDER'">
+                      {{ cat.type === 'GELIR' ? 'Gelir' : 'Gider' }}
+                    </span>
+                  </td>
+                  <td>{{ cat.name }}</td>
+                  <td>{{ cat.default_payment_term_days }} gün</td>
+                  <td>
+                    <span class="status-badge" [class.status-badge--active]="cat.is_active" [class.status-badge--inactive]="!cat.is_active">
+                      {{ cat.is_active ? 'Aktif' : 'Pasif' }}
+                    </span>
+                  </td>
+                  <td class="actions-cell">
+                    <button class="btn-action btn-action--toggle" (click)="toggleCategoryActive(cat)" [title]="cat.is_active ? 'Pasif Yap' : 'Aktif Yap'">
+                      {{ cat.is_active ? '&#9724;' : '&#9723;' }}
+                    </button>
+                    <button class="btn-action btn-action--edit" (click)="editCategory(cat)" title="Düzenle">&#9998;</button>
+                    <button class="btn-action btn-action--delete" (click)="confirmDeleteCategory(cat.id)" title="Sil">&#128465;</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="5" class="empty-cell">Henüz kategori eklenmemiş.</td></tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+    </div>
+  }
+
+  <!-- ───────────────────────── TAB: CHART OF ACCOUNTS ───────────────────── -->
+  @if (activeTab() === 'chart') {
+    <div class="settings-panel">
+
+      <!-- Form Card -->
+      <div class="form-card">
+        <h3 class="form-card__title">{{ chartEditingId() ? 'Hesap Düzenle' : 'Yeni Hesap Ekle' }}</h3>
+        <form [formGroup]="chartForm" (ngSubmit)="saveChartAccount()" class="inline-form inline-form--wrap">
+          <div class="inline-form__field">
+            <label class="form-label">Hesap Kodu <span class="required">*</span></label>
+            <input
+              type="text"
+              formControlName="code"
+              class="form-input form-input--narrow"
+              [class.form-input--invalid]="chartForm.get('code')?.invalid && chartForm.get('code')?.touched"
+              placeholder="600.10.01"
+            />
+          </div>
+          <div class="inline-form__field inline-form__field--grow">
+            <label class="form-label">Hesap Adı <span class="required">*</span></label>
+            <input
+              type="text"
+              formControlName="name"
+              class="form-input"
+              [class.form-input--invalid]="chartForm.get('name')?.invalid && chartForm.get('name')?.touched"
+              placeholder="Hesap adı giriniz"
+            />
+          </div>
+          <div class="inline-form__field">
+            <label class="form-label">Tip</label>
+            <select formControlName="type" class="form-select">
+              <option value="GELIR">Gelir</option>
+              <option value="GIDER">Gider</option>
+            </select>
+          </div>
+          <div class="inline-form__field">
+            <label class="form-label">Üst Hesap</label>
+            <select formControlName="parent_code" class="form-select">
+              <option [value]="null">— Ana Hesap —</option>
+              @for (p of parentCodeOptions(); track p.id) {
+                <option [value]="p.code">{{ p.code }} - {{ p.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="inline-form__field">
+            <label class="form-label">Aktif</label>
+            <label class="toggle">
+              <input type="checkbox" formControlName="is_active" />
+              <span class="toggle__track"></span>
+            </label>
+          </div>
+          <div class="inline-form__actions">
+            <button type="submit" class="btn btn--primary" [disabled]="saving()">
+              @if (saving()) { <span class="spinner spinner--sm"></span> }
+              {{ chartEditingId() ? 'Güncelle' : 'Ekle' }}
+            </button>
+            @if (chartEditingId()) {
+              <button type="button" class="btn btn--outline" (click)="cancelChartEdit()">İptal</button>
+            }
+          </div>
+        </form>
+      </div>
+
+      <!-- Filter + Sort -->
+      <div class="filter-row">
+        <div class="filter-pills">
+          <button class="filter-pill" [class.filter-pill--active]="chartFilterType() === 'ALL'" (click)="chartFilterType.set('ALL')">Tümü</button>
+          <button class="filter-pill filter-pill--gelir" [class.filter-pill--active]="chartFilterType() === 'GELIR'" (click)="chartFilterType.set('GELIR')">Gelir</button>
+          <button class="filter-pill filter-pill--gider" [class.filter-pill--active]="chartFilterType() === 'GIDER'" (click)="chartFilterType.set('GIDER')">Gider</button>
+        </div>
+        <button class="sort-btn" (click)="toggleChartSort()" title="Koda göre sırala">
+          Hesap Kodu {{ chartSortAsc() ? '&#8593;' : '&#8595;' }}
+        </button>
+        <span class="record-count">{{ filteredChartAccounts().length }} kayıt</span>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrapper">
+        @if (loading()) {
+          <div class="loading-state"><div class="spinner"></div><span>Yükleniyor...</span></div>
+        } @else {
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Hesap Kodu</th>
+                <th>Hesap Adı</th>
+                <th>Tip</th>
+                <th>Üst Hesap Kodu</th>
+                <th>Aktif</th>
+                <th class="col-actions">İşlemler</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (acc of filteredChartAccounts(); track acc.id) {
+                <tr [class.row--child]="isChildAccount(acc)">
+                  <td class="code-cell">
+                    @if (isChildAccount(acc)) {
+                      <span class="indent-arrow">&#x21B3;</span>
+                    }
+                    <span class="monospace">{{ acc.code }}</span>
+                  </td>
+                  <td>{{ acc.name }}</td>
+                  <td>
+                    <span class="type-badge" [class.type-badge--gelir]="acc.type === 'GELIR'" [class.type-badge--gider]="acc.type === 'GIDER'">
+                      {{ acc.type === 'GELIR' ? 'Gelir' : 'Gider' }}
+                    </span>
+                  </td>
+                  <td class="text-muted monospace">{{ acc.parent_code || '—' }}</td>
+                  <td>
+                    <span class="status-badge" [class.status-badge--active]="acc.is_active" [class.status-badge--inactive]="!acc.is_active">
+                      {{ acc.is_active ? 'Aktif' : 'Pasif' }}
+                    </span>
+                  </td>
+                  <td class="actions-cell">
+                    <button class="btn-action btn-action--toggle" (click)="toggleChartActive(acc)" [title]="acc.is_active ? 'Pasif Yap' : 'Aktif Yap'">
+                      {{ acc.is_active ? '&#9724;' : '&#9723;' }}
+                    </button>
+                    <button class="btn-action btn-action--edit" (click)="editChartAccount(acc)" title="Düzenle">&#9998;</button>
+                    <button class="btn-action btn-action--delete" (click)="confirmDeleteChart(acc.id)" title="Sil">&#128465;</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" class="empty-cell">Henüz hesap eklenmemiş.</td></tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+    </div>
+  }
+
+  <!-- ───────────────────────── TAB: FIRM MANAGEMENT ─────────────────────── -->
+  @if (activeTab() === 'firms') {
+    <div class="settings-panel">
+
+      <div class="section-header">
+        <div>
+          <h3 class="section-title">Firma Listesi</h3>
+          <p class="section-subtitle">Tüm tenantlara ait firmalar</p>
+        </div>
+        <button class="btn btn--primary" (click)="openNewFirm()">+ Yeni Firma</button>
+      </div>
+
+      <!-- Firm Form -->
+      @if (showFirmForm()) {
+        <div class="form-card form-card--inline">
+          <h4 class="form-card__title">{{ firmEditingId() ? 'Firma Düzenle' : 'Yeni Firma Ekle' }}</h4>
+          <form [formGroup]="firmForm" (ngSubmit)="saveFirm()" class="firm-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Tenant <span class="required">*</span></label>
+                <select
+                  formControlName="tenant_id"
+                  class="form-input"
+                  [class.form-input--invalid]="firmForm.get('tenant_id')?.invalid && firmForm.get('tenant_id')?.touched"
+                >
+                  <option value="" disabled>Tenant seçiniz...</option>
+                  @for (tenant of tenants(); track tenant.id) {
+                    <option [value]="tenant.id">{{ tenant.name }}</option>
+                  }
+                </select>
+                @if (firmForm.get('tenant_id')?.invalid && firmForm.get('tenant_id')?.touched) {
+                  <span class="form-error">Tenant seçimi zorunludur.</span>
+                }
+              </div>
+              <div class="form-group">
+                <label class="form-label">Firma Adı <span class="required">*</span></label>
+                <input
+                  type="text"
+                  formControlName="name"
+                  class="form-input"
+                  [class.form-input--invalid]="firmForm.get('name')?.invalid && firmForm.get('name')?.touched"
+                  placeholder="Firma adı"
+                />
+                @if (firmForm.get('name')?.invalid && firmForm.get('name')?.touched) {
+                  <span class="form-error">Firma adı zorunludur.</span>
+                }
+              </div>
+              <div class="form-group">
+                <label class="form-label">Vergi No <span class="required">*</span></label>
+                <input
+                  type="text"
+                  formControlName="tax_no"
+                  class="form-input"
+                  [class.form-input--invalid]="firmForm.get('tax_no')?.invalid && firmForm.get('tax_no')?.touched"
+                  placeholder="1234567890"
+                />
+                @if (firmForm.get('tax_no')?.invalid && firmForm.get('tax_no')?.touched) {
+                  <span class="form-error">Vergi numarası zorunludur.</span>
+                }
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Adres</label>
+                <input type="text" formControlName="address" class="form-input" placeholder="Firma adresi" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Telefon</label>
+                <input type="text" formControlName="phone" class="form-input" placeholder="+90 212 000 00 00" />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn--outline" (click)="cancelFirmEdit()">İptal</button>
+              <button type="submit" class="btn btn--primary" [disabled]="saving()">
+                @if (saving()) { <span class="spinner spinner--sm"></span> }
+                {{ firmEditingId() ? 'Güncelle' : 'Kaydet' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      }
+
+      <!-- Firms Table -->
+      <div class="table-wrapper">
+        @if (loading()) {
+          <div class="loading-state"><div class="spinner"></div><span>Yükleniyor...</span></div>
+        } @else {
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Tenant</th>
+                <th>Firma Adı</th>
+                <th>Vergi No</th>
+                <th>Adres</th>
+                <th>Telefon</th>
+                <th>Aktif</th>
+                <th class="col-actions">İşlemler</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (firm of firms(); track firm.id) {
+                <tr>
+                  <td>
+                    <span class="badge badge--plan badge--plan-pro">{{ $any(firm).tenant_name || '—' }}</span>
+                  </td>
+                  <td class="font-medium">{{ firm.name }}</td>
+                  <td class="monospace text-muted">{{ firm.tax_no }}</td>
+                  <td class="text-muted">{{ firm.address || '—' }}</td>
+                  <td class="text-muted">{{ firm.phone || '—' }}</td>
+                  <td>
+                    <span class="status-badge" [class.status-badge--active]="$any(firm).is_active !== false" [class.status-badge--inactive]="$any(firm).is_active === false">
+                      {{ $any(firm).is_active !== false ? 'Aktif' : 'Pasif' }}
+                    </span>
+                  </td>
+                  <td class="actions-cell">
+                    <button class="btn-action btn-action--toggle" (click)="toggleFirmActive(firm)" [title]="$any(firm).is_active !== false ? 'Pasif Yap' : 'Aktif Yap'">
+                      {{ $any(firm).is_active !== false ? '&#9724;' : '&#9723;' }}
+                    </button>
+                    <button class="btn-action btn-action--edit" (click)="editFirm(firm)" title="Düzenle">&#9998;</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="7" class="empty-cell">Henüz firma eklenmemiş.</td></tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+    </div>
+  }
+
+  <!-- ───────────────────────── TAB: USER MANAGEMENT ─────────────────────── -->
+  @if (activeTab() === 'users') {
+    <div class="settings-panel">
+
+      <div class="section-header">
+        <div>
+          <h3 class="section-title">Kullanıcı Yönetimi</h3>
+          <p class="section-subtitle">Tüm kullanıcılar</p>
+        </div>
+        <button class="btn btn--primary" (click)="openNewUser()">
+          <span class="material-icons" style="font-size:16px">person_add</span> Yeni Kullanıcı
+        </button>
+      </div>
+
+      <!-- User Create Form -->
+      @if (showUserForm()) {
+        <div class="form-card form-card--inline">
+          <h4 class="form-card__title">Yeni Kullanıcı Oluştur</h4>
+          <form [formGroup]="userForm" (ngSubmit)="saveUser()">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Ad Soyad <span class="required">*</span></label>
+                <input type="text" formControlName="full_name" class="form-input" placeholder="Ad Soyad" />
+                @if (userForm.get('full_name')?.invalid && userForm.get('full_name')?.touched) {
+                  <span class="form-error">Ad soyad zorunludur.</span>
+                }
+              </div>
+              <div class="form-group">
+                <label class="form-label">E-posta <span class="required">*</span></label>
+                <input type="email" formControlName="email" class="form-input" placeholder="kullanici@firma.com" />
+                @if (userForm.get('email')?.invalid && userForm.get('email')?.touched) {
+                  <span class="form-error">Geçerli bir e-posta giriniz.</span>
+                }
+              </div>
+              <div class="form-group">
+                <label class="form-label">Şifre <span class="required">*</span></label>
+                <input type="password" formControlName="password" class="form-input" placeholder="Min. 6 karakter" />
+                @if (userForm.get('password')?.invalid && userForm.get('password')?.touched) {
+                  <span class="form-error">Şifre en az 6 karakter olmalıdır.</span>
+                }
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Tenant <span class="required">*</span></label>
+                <select formControlName="tenant_id" class="form-input">
+                  <option value="" disabled>Tenant seçiniz...</option>
+                  @for (tenant of tenants(); track tenant.id) {
+                    <option [value]="tenant.id">{{ tenant.name }}</option>
+                  }
+                </select>
+                @if (userForm.get('tenant_id')?.invalid && userForm.get('tenant_id')?.touched) {
+                  <span class="form-error">Tenant seçimi zorunludur.</span>
+                }
+              </div>
+              <div class="form-group">
+                <label class="form-label">Firma <span class="text-muted">(opsiyonel - boş bırakılırsa tüm firmalara erişir)</span></label>
+                <select formControlName="firm_id" class="form-input">
+                  <option value="">Tüm Firmalar</option>
+                  @for (firm of userFormFirms; track firm.id) {
+                    <option [value]="firm.id">{{ firm.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Rol <span class="required">*</span></label>
+                <select formControlName="role" class="form-input">
+                  @for (role of roleOptions; track role) {
+                    <option [value]="role">{{ roleLabels[role] }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn--outline" (click)="cancelUserForm()">İptal</button>
+              <button type="submit" class="btn btn--primary" [disabled]="saving()">
+                @if (saving()) { <span class="spinner spinner--sm"></span> }
+                Kullanıcı Oluştur
+              </button>
+            </div>
+          </form>
+        </div>
+      }
+
+      <!-- Users Table -->
+      <div class="table-wrapper">
+        @if (loading()) {
+          <div class="loading-state"><div class="spinner"></div><span>Yükleniyor...</span></div>
+        } @else {
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Ad Soyad</th>
+                <th>Rol</th>
+                <th>Firma</th>
+                <th>Aktif</th>
+                <th class="col-actions">İşlemler</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (user of users(); track user.id) {
+                <tr>
+                  <td class="font-medium">{{ user.full_name }}</td>
+                  <td>
+                    @if (user.is_super_admin) {
+                      <span class="role-badge role-badge--super">Süper Admin</span>
+                    } @else {
+                      <select
+                        class="role-select"
+                        [value]="user.role"
+                        [disabled]="userSavingId() === user.id"
+                        (change)="onRoleChange(user, $event)"
+                      >
+                        @for (role of roleOptions; track role) {
+                          <option [value]="role">{{ roleLabels[role] }}</option>
+                        }
+                      </select>
+                    }
+                  </td>
+                  <td class="text-muted">{{ getFirmName(user.firm_id) }}</td>
+                  <td>
+                    <span class="status-badge" [class.status-badge--active]="user.is_active" [class.status-badge--inactive]="!user.is_active">
+                      {{ user.is_active ? 'Aktif' : 'Pasif' }}
+                    </span>
+                  </td>
+                  <td class="actions-cell">
+                    @if (!user.is_super_admin) {
+                      @if (userSavingId() === user.id) {
+                        <span class="spinner spinner--sm"></span>
+                      } @else {
+                        <button
+                          class="btn-action btn-action--toggle"
+                          (click)="toggleUserActive(user)"
+                          [title]="user.is_active ? 'Pasif Yap' : 'Aktif Yap'"
+                        >
+                          {{ user.is_active ? '&#9724;' : '&#9723;' }}
+                        </button>
+                        <button
+                          class="btn-action btn-action--danger"
+                          (click)="confirmDeleteUser(user.id)"
+                          title="Kullanıcıyı Sil"
+                        >
+                          <span class="material-icons" style="font-size:16px">delete</span>
+                        </button>
+                      }
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="5" class="empty-cell">Henüz kullanıcı bulunamadı.</td></tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+    </div>
+  }
+
+  <!-- User Delete Confirm Dialog -->
+  @if (showUserDeleteDialog()) {
+    <app-confirm-dialog
+      title="Kullanıcıyı Sil"
+      message="Bu kullanıcıyı silmek istediğinizden emin misiniz? Kullanıcı sisteme giriş yapamayacaktır."
+      confirmText="Evet, Sil"
+      cancelText="İptal"
+      (confirmed)="onUserDeleteConfirmed()"
+      (cancelled)="cancelUserDelete()"
+    />
+  }
+
+}
+
+<!-- Delete Confirm Dialog -->
+@if (showDeleteDialog()) {
+  <app-confirm-dialog
+    [title]="getDeleteTitle()"
+    [message]="getDeleteMessage()"
+    confirmText="Evet, Sil"
+    cancelText="İptal"
+    (confirmed)="onDeleteConfirmed()"
+    (cancelled)="cancelDelete()"
+  />
+}

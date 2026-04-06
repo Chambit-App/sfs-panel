@@ -1,0 +1,23 @@
+<div class="confirm-dialog__overlay" (click)="onOverlayClick($event)">
+  <div class="confirm-dialog__panel" role="dialog" aria-modal="true" [attr.aria-label]="title">
+    <div class="confirm-dialog__header">
+      <div class="confirm-dialog__icon-wrapper">
+        <span class="material-icons confirm-dialog__icon">help_outline</span>
+      </div>
+      <h2 class="confirm-dialog__title">{{ title }}</h2>
+    </div>
+
+    <p class="confirm-dialog__message">{{ message }}</p>
+
+    <div class="confirm-dialog__actions">
+      <button class="btn btn--secondary" (click)="onCancel()">
+        <span class="material-icons">close</span>
+        {{ cancelText }}
+      </button>
+      <button class="btn btn--primary" (click)="onConfirm()">
+        <span class="material-icons">check</span>
+        {{ confirmText }}
+      </button>
+    </div>
+  </div>
+</div>

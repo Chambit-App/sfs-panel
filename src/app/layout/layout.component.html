@@ -1,0 +1,23 @@
+<div class="layout">
+  <!-- Mobile backdrop -->
+  @if (sidebarOpen()) {
+    <div class="layout__backdrop" (click)="closeSidebar()"></div>
+  }
+
+  <app-sidebar
+    class="layout__sidebar"
+    [mobileOpen]="sidebarOpen()"
+    (closeMobile)="closeSidebar()"
+  />
+
+  <div class="layout__main">
+    <app-topbar
+      class="layout__topbar"
+      [showHamburger]="true"
+      (hamburgerClick)="toggleSidebar()"
+    />
+    <main class="layout__content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

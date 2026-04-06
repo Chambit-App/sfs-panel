@@ -1,0 +1,462 @@
+<app-page-header
+  title="Ödemeler & Tahsilatlar"
+  subtitle="Gelir ve gider işlemlerinizi yönetin"
+/>
+
+<!-- Tab Bar -->
+<div class="payments-tabs">
+  <button
+    class="payments-tabs__tab"
+    [class.payments-tabs__tab--active]="activeTab() === 'list'"
+    (click)="setTab('list')"
+  >
+    <span class="tab-icon">&#9776;</span> Ödeme Listesi
+  </button>
+  <button
+    class="payments-tabs__tab"
+    [class.payments-tabs__tab--active]="activeTab() === 'calendar'"
+    (click)="setTab('calendar')"
+  >
+    <span class="tab-icon">&#128197;</span> Nakit Akış Takvimi
+  </button>
+  <button
+    class="payments-tabs__tab"
+    [class.payments-tabs__tab--active]="activeTab() === 'form'"
+    (click)="setTab('form')"
+  >
+    <span class="tab-icon">&#43;</span> Yeni İşlem
+  </button>
+</div>
+
+<!-- ─────────────────────────────── TAB: LIST ──────────────────────────────── -->
+@if (activeTab() === 'list') {
+  <div class="payments-panel">
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <div class="filter-bar__group">
+        <label class="filter-bar__label">İşlem Tipi</label>
+        <select class="filter-bar__select" [value]="filterType()" (change)="setFilterType($any($event.target).value)">
+          <option value="ALL">Tümü</option>
+          <option value="GELIR">Gelir</option>
+          <option value="GIDER">Gider</option>
+        </select>
+      </div>
+
+      <div class="filter-bar__group">
+        <label class="filter-bar__label">Durum</label>
+        <select class="filter-bar__select" [value]="filterStatus()" (change)="setFilterStatus($any($event.target).value)">
+          <option value="ALL">Tümü</option>
+          <option value="BEKLIYOR">Bekliyor</option>
+          <option value="ODENDI">Ödendi</option>
+          <option value="IPTAL">İptal</option>
+        </select>
+      </div>
+
+      <div class="filter-bar__group">
+        <label class="filter-bar__label">Vade Başlangıç</label>
+        <input
+          type="date"
+          class="filter-bar__input"
+          [value]="filterDateFrom()"
+          (change)="setFilterDateFrom($any($event.target).value)"
+        />
+      </div>
+
+      <div class="filter-bar__group">
+        <label class="filter-bar__label">Vade Bitiş</label>
+        <input
+          type="date"
+          class="filter-bar__input"
+          [value]="filterDateTo()"
+          (change)="setFilterDateTo($any($event.target).value)"
+        />
+      </div>
+
+      <button class="btn btn--outline btn--sm" (click)="clearFilters()">Temizle</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrapper">
+      @if (listLoading()) {
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <span>Yükleniyor...</span>
+        </div>
+      } @else if (filteredTransactions().length === 0) {
+        <div class="empty-state">
+          <p>Görüntülenecek işlem bulunamadı.</p>
+          <button class="btn btn--primary btn--sm" (click)="setTab('form')">Yeni İşlem Ekle</button>
+        </div>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>İşlem Tipi</th>
+              <th>Fatura No</th>
+              <th>Cari Adı</th>
+              <th>Tutar</th>
+              <th>Fatura Tarihi</th>
+              <th>Vade Tarihi</th>
+              <th>Durum</th>
+              <th class="col-actions">İşlemler</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of filteredTransactions(); track t.id) {
+              <tr [class.row--overdue]="isOverdue(t)">
+                <td>
+                  <span class="type-badge" [class.type-badge--gelir]="t.type === 'GELIR'" [class.type-badge--gider]="t.type === 'GIDER'">
+                    {{ getTypeLabel(t.type) }}
+                  </span>
+                </td>
+                <td class="text-muted">{{ t.invoice_no || '—' }}</td>
+                <td>{{ t.cari_name || '—' }}</td>
+                <td class="text-right font-mono">
+                  <span [class.amount--gelir]="t.type === 'GELIR'" [class.amount--gider]="t.type === 'GIDER'">
+                    {{ t.amount | currencyTry }}
+                  </span>
+                </td>
+                <td>{{ t.invoice_date | turkishDate }}</td>
+                <td [class.text-danger]="isOverdue(t)">{{ t.due_date | turkishDate }}</td>
+                <td>
+                  <span class="badge" [class]="getStatusClass(t.status)">{{ getStatusLabel(t.status) }}</span>
+                </td>
+                <td class="actions-cell">
+                  @if (t.status === 'BEKLIYOR') {
+                    <button class="btn-action btn-action--pay" title="Ödendi Olarak İşaretle" (click)="markAsPaid(t)">
+                      &#10003;
+                    </button>
+                  }
+                  <button class="btn-action btn-action--edit" title="Düzenle" (click)="editTransaction(t)">
+                    &#9998;
+                  </button>
+                  <button class="btn-action btn-action--delete" title="Sil" (click)="confirmDelete(t.id)">
+                    &#128465;
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+
+    <div class="list-footer">
+      <span class="text-muted">{{ filteredTransactions().length }} kayıt</span>
+      <button class="btn btn--primary" (click)="setTab('form')">+ Yeni İşlem</button>
+    </div>
+  </div>
+}
+
+<!-- ─────────────────────────────── TAB: CALENDAR ─────────────────────────── -->
+@if (activeTab() === 'calendar') {
+  <div class="payments-panel">
+
+    <!-- Month Navigator -->
+    <div class="calendar-nav">
+      <button class="calendar-nav__btn" (click)="prevMonth()" title="Önceki Ay">&#8592;</button>
+      <h2 class="calendar-nav__title">{{ calendarMonthLabel() }}</h2>
+      <button class="calendar-nav__btn" (click)="nextMonth()" title="Sonraki Ay">&#8594;</button>
+    </div>
+
+    @if (calendarLoading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <span>Yükleniyor...</span>
+      </div>
+    } @else {
+      <!-- Calendar Grid -->
+      <div class="calendar-grid">
+        <!-- Day headers -->
+        <div class="calendar-grid__header">Pzt</div>
+        <div class="calendar-grid__header">Sal</div>
+        <div class="calendar-grid__header">Çar</div>
+        <div class="calendar-grid__header">Per</div>
+        <div class="calendar-grid__header">Cum</div>
+        <div class="calendar-grid__header calendar-grid__header--weekend">Cmt</div>
+        <div class="calendar-grid__header calendar-grid__header--weekend">Paz</div>
+
+        @for (day of calendarDays(); track $index) {
+          <div
+            class="calendar-cell"
+            [class.calendar-cell--empty]="!day.isCurrentMonth"
+            [class.calendar-cell--today]="day.isToday"
+            [class.calendar-cell--weekend]="day.isWeekend && day.isCurrentMonth"
+            [class.calendar-cell--selected]="isDaySelected(day)"
+            [class.calendar-cell--clickable]="day.isCurrentMonth"
+            (click)="onDayClick(day)"
+          >
+            @if (day.isCurrentMonth && day.dayNum !== null) {
+              <div class="calendar-cell__day-num" [class.today-badge]="day.isToday">{{ day.dayNum }}</div>
+              @if (day.cashFlow) {
+                <div class="calendar-cell__gelir">+{{ day.cashFlow.total_gelir | currencyTry }}</div>
+                <div class="calendar-cell__gider">-{{ day.cashFlow.total_gider | currencyTry }}</div>
+                <div class="calendar-cell__net" [class.net--positive]="day.cashFlow.net >= 0" [class.net--negative]="day.cashFlow.net < 0">
+                  {{ day.cashFlow.net | currencyTry }}
+                </div>
+              }
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Day Detail Panel -->
+    @if (selectedDayDate()) {
+      <div class="day-detail">
+        <div class="day-detail__header">
+          <h3>{{ selectedDayDate() | turkishDate:'long' }} - İşlemler</h3>
+          <button class="day-detail__close" (click)="closeDayDetail()">&#x2715;</button>
+        </div>
+        @if (selectedDayTransactions().length === 0) {
+          <p class="text-muted day-detail__empty">Bu güne ait işlem bulunmamaktadır.</p>
+        } @else {
+          <table class="data-table data-table--compact">
+            <thead>
+              <tr>
+                <th>Tip</th>
+                <th>Cari</th>
+                <th>Tutar</th>
+                <th>Durum</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (t of selectedDayTransactions(); track t.id) {
+                <tr>
+                  <td>
+                    <span class="type-badge" [class.type-badge--gelir]="t.type === 'GELIR'" [class.type-badge--gider]="t.type === 'GIDER'">
+                      {{ getTypeLabel(t.type) }}
+                    </span>
+                  </td>
+                  <td>{{ t.cari_name || '—' }}</td>
+                  <td class="text-right font-mono">{{ t.amount | currencyTry }}</td>
+                  <td>
+                    <span class="badge" [class]="getStatusClass(t.status)">{{ getStatusLabel(t.status) }}</span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    }
+  </div>
+}
+
+<!-- ─────────────────────────────── TAB: FORM ─────────────────────────────── -->
+@if (activeTab() === 'form') {
+  <div class="payments-panel">
+    <div class="form-header">
+      <h2 class="form-header__title">
+        @if (editingId()) {
+          İşlemi Düzenle
+        } @else {
+          Yeni İşlem
+        }
+      </h2>
+      @if (editingId()) {
+        <button class="btn btn--outline btn--sm" (click)="resetForm()">Yeni İşlem</button>
+      }
+    </div>
+
+    <form [formGroup]="transactionForm" (ngSubmit)="onSubmit()" class="transaction-form">
+
+      <!-- Row 1: Type -->
+      <div class="form-row form-row--full">
+        <div class="form-group">
+          <label class="form-label">İşlem Tipi <span class="required">*</span></label>
+          <div class="radio-group">
+            <label class="radio-option" [class.radio-option--active]="transactionForm.get('type')?.value === 'GELIR'">
+              <input type="radio" formControlName="type" value="GELIR" />
+              <span class="radio-option__label gelir-color">&#9650; Gelir (Tahsilat)</span>
+            </label>
+            <label class="radio-option" [class.radio-option--active]="transactionForm.get('type')?.value === 'GIDER'">
+              <input type="radio" formControlName="type" value="GIDER" />
+              <span class="radio-option__label gider-color">&#9660; Gider (Ödeme)</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Cari + Kategori -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="cari_id">
+            Cari Hesap <span class="required">*</span>
+            @if (transactionForm.get('type')?.value === 'GELIR') {
+              <span class="form-hint">(Müşteri)</span>
+            } @else {
+              <span class="form-hint">(Tedarikçi)</span>
+            }
+          </label>
+          <select
+            id="cari_id"
+            formControlName="cari_id"
+            class="form-select"
+            [class.form-select--invalid]="isInvalid('cari_id')"
+            (change)="onCariChange($event)"
+          >
+            <option value="">Seçiniz...</option>
+            @for (c of filteredCariAccounts(); track c.id) {
+              <option [value]="c.id">{{ c.name }}</option>
+            }
+          </select>
+          @if (isInvalid('cari_id')) {
+            <span class="form-error">Cari hesap zorunludur.</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="category_id">Kategori <span class="required">*</span></label>
+          <select
+            id="category_id"
+            formControlName="category_id"
+            class="form-select"
+            [class.form-select--invalid]="isInvalid('category_id')"
+          >
+            <option value="">Seçiniz...</option>
+            @for (cat of filteredCategoryItems(); track cat.id) {
+              <option [value]="cat.id">{{ cat.name }}</option>
+            }
+          </select>
+          @if (isInvalid('category_id')) {
+            <span class="form-error">Kategori zorunludur.</span>
+          }
+        </div>
+      </div>
+
+      <!-- Row 3: Banka + Fatura No -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="bank_id">Banka Hesabı</label>
+          <select id="bank_id" formControlName="bank_id" class="form-select">
+            <option value="">Seçiniz (İsteğe Bağlı)...</option>
+            @for (b of bankAccounts(); track b.id) {
+              <option [value]="b.id">{{ b.bank_name }} — {{ b.account_no }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="invoice_no">Fatura No</label>
+          <input
+            id="invoice_no"
+            type="text"
+            formControlName="invoice_no"
+            class="form-input"
+            placeholder="FTR-2024-001"
+          />
+        </div>
+      </div>
+
+      <!-- Row 4: Fatura Tarihi + Vade Gün -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="invoice_date">Fatura Tarihi <span class="required">*</span></label>
+          <input
+            id="invoice_date"
+            type="date"
+            formControlName="invoice_date"
+            class="form-input"
+            [class.form-input--invalid]="isInvalid('invoice_date')"
+          />
+          @if (isInvalid('invoice_date')) {
+            <span class="form-error">Fatura tarihi zorunludur.</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="payment_term_days">Vade (Gün) <span class="required">*</span></label>
+          <input
+            id="payment_term_days"
+            type="number"
+            formControlName="payment_term_days"
+            class="form-input"
+            [class.form-input--invalid]="isInvalid('payment_term_days')"
+            min="0"
+          />
+          @if (isInvalid('payment_term_days')) {
+            <span class="form-error">Vade gün sayısı zorunludur.</span>
+          }
+        </div>
+      </div>
+
+      <!-- Row 5: Vade Tarihi + Tutar -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="due_date">Vade Tarihi <span class="required">*</span></label>
+          <input
+            id="due_date"
+            type="date"
+            formControlName="due_date"
+            class="form-input"
+            [class.form-input--invalid]="isInvalid('due_date')"
+          />
+          <span class="form-hint">Fatura tarihi + vade gün otomatik hesaplanır, değiştirilebilir.</span>
+          @if (isInvalid('due_date')) {
+            <span class="form-error">Vade tarihi zorunludur.</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="amount">Tutar (₺) <span class="required">*</span></label>
+          <input
+            id="amount"
+            type="number"
+            formControlName="amount"
+            class="form-input"
+            [class.form-input--invalid]="isInvalid('amount')"
+            placeholder="0,00"
+            min="0.01"
+            step="0.01"
+          />
+          @if (isInvalid('amount')) {
+            <span class="form-error">Geçerli bir tutar giriniz.</span>
+          }
+        </div>
+      </div>
+
+      <!-- Row 6: Açıklama -->
+      <div class="form-row form-row--full">
+        <div class="form-group">
+          <label class="form-label" for="description">Açıklama</label>
+          <textarea
+            id="description"
+            formControlName="description"
+            class="form-textarea"
+            rows="3"
+            placeholder="İsteğe bağlı açıklama..."
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="form-actions">
+        <button type="button" class="btn btn--outline" (click)="setTab('list')">İptal</button>
+        <button type="submit" class="btn btn--primary" [disabled]="formLoading()">
+          @if (formLoading()) {
+            <span class="spinner spinner--sm"></span> Kaydediliyor...
+          } @else if (editingId()) {
+            Güncelle
+          } @else {
+            Kaydet
+          }
+        </button>
+      </div>
+
+    </form>
+  </div>
+}
+
+<!-- Delete Confirm Dialog -->
+@if (showDeleteDialog()) {
+  <app-confirm-dialog
+    title="İşlemi Sil"
+    message="Bu işlemi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+    confirmText="Evet, Sil"
+    cancelText="İptal"
+    (confirmed)="onDeleteConfirmed()"
+    (cancelled)="cancelDelete()"
+  />
+}

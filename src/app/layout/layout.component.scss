@@ -1,0 +1,64 @@
+.layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+
+  &__sidebar {
+    flex-shrink: 0;
+  }
+
+  &__main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  &__topbar {
+    flex-shrink: 0;
+  }
+
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-lg, 24px);
+    background: var(--color-bg, #f5f6fa);
+
+    @media (max-width: 768px) {
+      padding: var(--space-md, 16px);
+    }
+
+    @media (max-width: 480px) {
+      padding: var(--space-sm, 8px);
+    }
+  }
+
+  &__backdrop {
+    display: none;
+
+    @media (max-width: 768px) {
+      display: block;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: calc(var(--z-sidebar, 100) - 1);
+      animation: backdropFadeIn 0.2s ease;
+    }
+  }
+
+  @keyframes backdropFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  // On mobile, sidebar is fixed/overlay so layout content takes full width
+  @media (max-width: 768px) {
+    app-sidebar {
+      // Sidebar is position:fixed on mobile, so it doesn't participate in flex flow
+      // We use width 0 to not take up space
+      width: 0;
+      flex-shrink: 0;
+    }
+  }
+}

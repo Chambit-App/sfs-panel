@@ -1,0 +1,372 @@
+<app-page-header title="Gelir/Gider Raporları" [subtitle]="firmName()" />
+
+<!-- Loading -->
+@if (loading()) {
+  <div class="reports__loading">
+    <span class="reports__loading-spinner"></span>
+    <p>Rapor yükleniyor...</p>
+  </div>
+}
+
+<!-- No Firm -->
+@if (!activeFirm() && !loading()) {
+  <div class="reports__empty-state">
+    <span class="material-icons">bar_chart</span>
+    <h3>Firma Seçilmedi</h3>
+    <p>Rapor verilerini görmek için lütfen üstten bir firma seçin.</p>
+  </div>
+}
+
+@if (activeFirm() && !loading()) {
+  <!-- Tabs -->
+  <div class="reports__tabs">
+    <button
+      class="reports__tab"
+      [class.reports__tab--active]="activeTab() === 'monthly'"
+      (click)="setTab('monthly')"
+    >
+      <span class="material-icons">table_chart</span>
+      Aylık Gelir/Gider Raporu
+    </button>
+    <button
+      class="reports__tab"
+      [class.reports__tab--active]="activeTab() === 'yoy'"
+      (click)="setTab('yoy')"
+    >
+      <span class="material-icons">compare_arrows</span>
+      Yıllar Arası Karşılaştırma
+    </button>
+  </div>
+
+  <!-- ===== TAB 1: MONTHLY ===== -->
+  @if (activeTab() === 'monthly') {
+    <!-- Controls -->
+    <div class="reports__toolbar">
+      <div class="reports__control-group">
+        <label class="reports__control-label">Yıl</label>
+        <select
+          class="form-control reports__year-select"
+          [ngModel]="selectedYear()"
+          (ngModelChange)="onYearChange($event)"
+        >
+          @for (y of yearOptions; track y) {
+            <option [value]="y">{{ y }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <!-- KPI Row -->
+    <div class="reports__kpi-row">
+      <app-kpi-card
+        title="Yıllık Toplam Gelir"
+        [value]="annualGelir()"
+        icon="trending_up"
+        format="currency"
+        trend="up"
+      />
+      <app-kpi-card
+        title="Yıllık Toplam Gider"
+        [value]="annualGider()"
+        icon="trending_down"
+        format="currency"
+        trend="down"
+      />
+      <app-kpi-card
+        title="Net Kar / Zarar"
+        [value]="annualNet()"
+        icon="account_balance"
+        format="currency"
+        [trend]="annualNet() >= 0 ? 'up' : 'down'"
+      />
+      <div class="reports__kpi-card reports__kpi-card--top-expense">
+        <span class="material-icons reports__kpi-icon">warning_amber</span>
+        <div class="reports__kpi-body">
+          <span class="reports__kpi-title">En Büyük Gider Kalemi</span>
+          <span class="reports__kpi-value">{{ topExpense()?.name ?? '-' }}</span>
+          <span class="reports__kpi-sub">{{ topExpense()?.total | currencyTry }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monthly Table -->
+    @if (monthlyRows().length === 0) {
+      <div class="reports__empty-state reports__empty-state--sm">
+        <span class="material-icons">inbox</span>
+        <h3>Veri Bulunamadı</h3>
+        <p>{{ selectedYear() }} yılı için kayıtlı işlem bulunamadı.</p>
+      </div>
+    } @else {
+      <div class="reports__table-wrapper">
+        <table class="reports__table">
+          <thead>
+            <tr>
+              <th class="reports__col-code sticky-col sticky-col--1">Kod</th>
+              <th class="reports__col-name sticky-col sticky-col--2">Hesap Adı</th>
+              @for (m of MONTHS_SHORT; track $index) {
+                <th class="reports__col-month">{{ m }}</th>
+              }
+              <th class="reports__col-total">TOPLAM</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- GELIRLER section header -->
+            <tr class="reports__section-header">
+              <td colspan="15">GELİRLER</td>
+            </tr>
+
+            @for (row of gelirRows(); track row.code) {
+              <tr
+                [class.reports__row--group]="row.isGroupHeader"
+                [class.reports__row--child]="!row.isGroupHeader && row.parentCode"
+              >
+                <td class="reports__col-code sticky-col sticky-col--1">{{ row.code }}</td>
+                <td class="reports__col-name sticky-col sticky-col--2"
+                  [class.reports__name--indented]="!row.isGroupHeader && row.parentCode">
+                  {{ row.name }}
+                </td>
+                @for (val of row.months; track $index) {
+                  <td class="reports__col-month reports__cell--number">
+                    {{ val | amountCell }}
+                  </td>
+                }
+                <td class="reports__col-total reports__cell--number reports__cell--total">
+                  {{ row.total | amountCell }}
+                </td>
+              </tr>
+            }
+
+            <!-- TOPLAM GELIR -->
+            <tr class="reports__row--subtotal">
+              <td class="sticky-col sticky-col--1"></td>
+              <td class="reports__col-name sticky-col sticky-col--2 reports__subtotal-label">TOPLAM GELİR</td>
+              @for (val of gelirMonthTotals(); track $index) {
+                <td class="reports__col-month reports__cell--number">{{ val | amountCell }}</td>
+              }
+              <td class="reports__col-total reports__cell--number reports__cell--total">
+                {{ annualGelir() | currencyTry }}
+              </td>
+            </tr>
+
+            <!-- GIDERLER section header -->
+            <tr class="reports__section-header">
+              <td colspan="15">GİDERLER</td>
+            </tr>
+
+            @for (row of giderRows(); track row.code) {
+              <tr
+                [class.reports__row--group]="row.isGroupHeader"
+                [class.reports__row--child]="!row.isGroupHeader && row.parentCode"
+              >
+                <td class="reports__col-code sticky-col sticky-col--1">{{ row.code }}</td>
+                <td class="reports__col-name sticky-col sticky-col--2"
+                  [class.reports__name--indented]="!row.isGroupHeader && row.parentCode">
+                  {{ row.name }}
+                </td>
+                @for (val of row.months; track $index) {
+                  <td class="reports__col-month reports__cell--number">
+                    {{ val | amountCell }}
+                  </td>
+                }
+                <td class="reports__col-total reports__cell--number reports__cell--total">
+                  {{ row.total | amountCell }}
+                </td>
+              </tr>
+            }
+
+            <!-- TOPLAM GIDER -->
+            <tr class="reports__row--subtotal">
+              <td class="sticky-col sticky-col--1"></td>
+              <td class="reports__col-name sticky-col sticky-col--2 reports__subtotal-label">TOPLAM GİDER</td>
+              @for (val of giderMonthTotals(); track $index) {
+                <td class="reports__col-month reports__cell--number">{{ val | amountCell }}</td>
+              }
+              <td class="reports__col-total reports__cell--number reports__cell--total">
+                {{ annualGider() | currencyTry }}
+              </td>
+            </tr>
+
+            <!-- NET KAR/ZARAR -->
+            <tr class="reports__row--net" [class.reports__row--net-positive]="annualNet() >= 0" [class.reports__row--net-negative]="annualNet() < 0">
+              <td class="sticky-col sticky-col--1"></td>
+              <td class="reports__col-name sticky-col sticky-col--2 reports__subtotal-label">NET KAR / ZARAR</td>
+              @for (val of netMonthValues(); track $index) {
+                <td class="reports__col-month reports__cell--number"
+                  [class.reports__cell--positive]="val > 0"
+                  [class.reports__cell--negative]="val < 0">
+                  {{ val | amountCell }}
+                </td>
+              }
+              <td class="reports__col-total reports__cell--number reports__cell--total"
+                [class.reports__cell--positive]="annualNet() > 0"
+                [class.reports__cell--negative]="annualNet() < 0">
+                {{ annualNet() | currencyTry }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Bar Chart -->
+      <div class="reports__chart-card">
+        <h3 class="reports__chart-title">Aylık Gelir / Gider Grafiği</h3>
+        <div class="reports__chart-container">
+          <canvas baseChart
+            [data]="barChartData()"
+            [options]="barChartOptions"
+            type="bar">
+          </canvas>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- ===== TAB 2: YEAR-OVER-YEAR ===== -->
+  @if (activeTab() === 'yoy') {
+    <!-- Controls -->
+    <div class="reports__toolbar">
+      <div class="reports__control-group">
+        <label class="reports__control-label">1. Yıl</label>
+        <select
+          class="form-control reports__year-select"
+          [ngModel]="yoyYear1()"
+          (ngModelChange)="onYoyYear1Change($event)"
+        >
+          @for (y of yearOptions; track y) {
+            <option [value]="y">{{ y }}</option>
+          }
+        </select>
+      </div>
+      <div class="reports__control-group">
+        <label class="reports__control-label">2. Yıl</label>
+        <select
+          class="form-control reports__year-select"
+          [ngModel]="yoyYear2()"
+          (ngModelChange)="onYoyYear2Change($event)"
+        >
+          @for (y of yearOptions; track y) {
+            <option [value]="y">{{ y }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    @if (yoyRows().length === 0) {
+      <div class="reports__empty-state reports__empty-state--sm">
+        <span class="material-icons">inbox</span>
+        <h3>Veri Bulunamadı</h3>
+        <p>Seçilen yıllar için kayıtlı işlem bulunamadı.</p>
+      </div>
+    } @else {
+      <div class="reports__table-wrapper">
+        <table class="reports__table reports__table--yoy">
+          <thead>
+            <tr class="reports__yoy-header-top">
+              <th class="reports__col-code sticky-col sticky-col--1" rowspan="2">Kod</th>
+              <th class="reports__col-name sticky-col sticky-col--2" rowspan="2">Hesap Adı</th>
+              @for (m of MONTHS_SHORT; track $index) {
+                <th colspan="2" class="reports__col-month-group">{{ m }}</th>
+              }
+              <th colspan="2" class="reports__col-month-group reports__col-total-group">TOPLAM</th>
+              <th rowspan="2" class="reports__col-diff">Fark</th>
+              <th rowspan="2" class="reports__col-pct">Değişim %</th>
+            </tr>
+            <tr class="reports__yoy-header-sub">
+              @for (m of MONTHS_SHORT; track $index) {
+                <th class="reports__col-year-sub reports__col-year1">{{ yoyYear1() }}</th>
+                <th class="reports__col-year-sub reports__col-year2">{{ yoyYear2() }}</th>
+              }
+              <th class="reports__col-year-sub reports__col-year1">{{ yoyYear1() }}</th>
+              <th class="reports__col-year-sub reports__col-year2">{{ yoyYear2() }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- GELIRLER -->
+            <tr class="reports__section-header">
+              <td [attr.colspan]="yoyColspan">GELİRLER</td>
+            </tr>
+
+            @for (row of yoyGelirRows(); track row.code) {
+              <tr
+                [class.reports__row--group]="row.isGroupHeader"
+                [class.reports__row--child]="!row.isGroupHeader && row.parentCode"
+              >
+                <td class="reports__col-code sticky-col sticky-col--1">{{ row.code }}</td>
+                <td class="reports__col-name sticky-col sticky-col--2"
+                  [class.reports__name--indented]="!row.isGroupHeader && row.parentCode">
+                  {{ row.name }}
+                </td>
+                @for (i of monthIndices; track i) {
+                  <td class="reports__col-month reports__cell--number reports__col-year1">
+                    {{ row.year1Months[i] | amountCell }}
+                  </td>
+                  <td class="reports__col-month reports__cell--number reports__col-year2">
+                    {{ row.year2Months[i] | amountCell }}
+                  </td>
+                }
+                <td class="reports__col-total reports__cell--number reports__col-year1">
+                  {{ row.year1Total | amountCell }}
+                </td>
+                <td class="reports__col-total reports__cell--number reports__col-year2">
+                  {{ row.year2Total | amountCell }}
+                </td>
+                <td class="reports__col-diff reports__cell--number"
+                  [class.reports__cell--positive]="row.diff > 0"
+                  [class.reports__cell--negative]="row.diff < 0">
+                  {{ row.diff | amountCell }}
+                </td>
+                <td class="reports__col-pct reports__cell--number"
+                  [class.reports__cell--positive]="(row.diffPct ?? 0) > 0"
+                  [class.reports__cell--negative]="(row.diffPct ?? 0) < 0">
+                  {{ row.diffPct != null ? (row.diffPct | number:'1.1-1') + '%' : '-' }}
+                </td>
+              </tr>
+            }
+
+            <!-- GIDERLER -->
+            <tr class="reports__section-header">
+              <td [attr.colspan]="yoyColspan">GİDERLER</td>
+            </tr>
+
+            @for (row of yoyGiderRows(); track row.code) {
+              <tr
+                [class.reports__row--group]="row.isGroupHeader"
+                [class.reports__row--child]="!row.isGroupHeader && row.parentCode"
+              >
+                <td class="reports__col-code sticky-col sticky-col--1">{{ row.code }}</td>
+                <td class="reports__col-name sticky-col sticky-col--2"
+                  [class.reports__name--indented]="!row.isGroupHeader && row.parentCode">
+                  {{ row.name }}
+                </td>
+                @for (i of monthIndices; track i) {
+                  <td class="reports__col-month reports__cell--number reports__col-year1">
+                    {{ row.year1Months[i] | amountCell }}
+                  </td>
+                  <td class="reports__col-month reports__cell--number reports__col-year2">
+                    {{ row.year2Months[i] | amountCell }}
+                  </td>
+                }
+                <td class="reports__col-total reports__cell--number reports__col-year1">
+                  {{ row.year1Total | amountCell }}
+                </td>
+                <td class="reports__col-total reports__cell--number reports__col-year2">
+                  {{ row.year2Total | amountCell }}
+                </td>
+                <td class="reports__col-diff reports__cell--number"
+                  [class.reports__cell--positive]="row.diff < 0"
+                  [class.reports__cell--negative]="row.diff > 0">
+                  {{ row.diff | amountCell }}
+                </td>
+                <td class="reports__col-pct reports__cell--number"
+                  [class.reports__cell--positive]="(row.diffPct ?? 0) < 0"
+                  [class.reports__cell--negative]="(row.diffPct ?? 0) > 0">
+                  {{ row.diffPct != null ? (row.diffPct | number:'1.1-1') + '%' : '-' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+}

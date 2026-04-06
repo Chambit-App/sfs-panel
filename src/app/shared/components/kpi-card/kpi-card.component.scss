@@ -1,0 +1,97 @@
+.kpi-card {
+  background: var(--color-card, #ffffff);
+  border-radius: var(--radius-lg, 12px);
+  padding: 20px 24px;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
+  border: 1px solid var(--color-border-light, #f0f0f0);
+  transition: box-shadow 0.2s;
+
+  &:hover {
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.10));
+  }
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  &__title {
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: 500;
+    color: var(--color-text-secondary, #6b7280);
+    line-height: 1.4;
+  }
+
+  &__icon-wrapper {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md, 8px);
+    background: rgba(233, 69, 96, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__icon {
+    font-size: 20px;
+    color: var(--color-accent, #e94560);
+  }
+
+  &__body {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  &__value-row {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+  }
+
+  &__prefix {
+    font-size: var(--font-size-lg, 1.125rem);
+    font-weight: 600;
+    color: var(--color-text-secondary, #6b7280);
+  }
+
+  &__value {
+    font-size: var(--font-size-2xl, 1.5rem);
+    font-weight: 700;
+    color: var(--color-text-primary, #1a1a2e);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__trend {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm, 4px);
+
+    &--up {
+      color: var(--color-success, #2ecc71);
+      background: rgba(46, 204, 113, 0.1);
+    }
+
+    &--down {
+      color: var(--color-danger, #e74c3c);
+      background: rgba(231, 76, 60, 0.1);
+    }
+
+    &--neutral {
+      color: var(--color-text-muted, #9ca3af);
+      background: rgba(156, 163, 175, 0.1);
+    }
+  }
+
+  &__trend-icon {
+    font-size: 18px;
+  }
+}

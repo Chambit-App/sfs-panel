@@ -1,0 +1,660 @@
+// ─── Variables ─────────────────────────────────────────────────────────────
+$gap: 1.25rem;
+$card-radius: 12px;
+$card-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+$card-border: 1px solid #e5e7eb;
+$color-gelir: #22c55e;
+$color-gider: #ef4444;
+$color-net: #6366f1;
+$color-gelir-bg: #f0fdf4;
+$color-gider-bg: #fff1f2;
+$color-gelir-border: #bbf7d0;
+$color-gider-border: #fecaca;
+
+// ─── Notice Banner ──────────────────────────────────────────────────────────
+.con__notice {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-left: 4px solid #3b82f6;
+  border-radius: 8px;
+  padding: 0.75rem 1.125rem;
+  margin-bottom: $gap;
+  font-size: 0.875rem;
+  color: #1e40af;
+
+  .material-icons {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    color: #3b82f6;
+  }
+}
+
+// ─── Empty ──────────────────────────────────────────────────────────────────
+.con__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem 1rem;
+  text-align: center;
+  color: #9ca3af;
+
+  &--inline {
+    padding: 3rem 1rem;
+  }
+
+  h3 {
+    margin: 0.75rem 0 0.375rem;
+    font-size: 1.1rem;
+    color: #374151;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+  }
+}
+
+.con__empty-icon {
+  font-size: 3rem;
+  color: #d1d5db;
+}
+
+// ─── Toolbar ────────────────────────────────────────────────────────────────
+.con__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: $gap;
+}
+
+.con__tabs {
+  display: flex;
+  gap: 0.5rem;
+  background: #f3f4f6;
+  border-radius: 10px;
+  padding: 0.25rem;
+}
+
+.con__tab {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.45rem 1rem;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  .material-icons {
+    font-size: 1rem;
+  }
+
+  &:hover {
+    background: #e5e7eb;
+    color: #374151;
+  }
+
+  &--active {
+    background: #fff;
+    color: #111827;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.con__year-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.con__year-label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+
+  .material-icons {
+    font-size: 1rem;
+  }
+}
+
+.con__year-select {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.4rem 0.875rem;
+  font-size: 0.875rem;
+  color: #111827;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+
+  &:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+  }
+}
+
+// ─── Loading ────────────────────────────────────────────────────────────────
+.con__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 0;
+  gap: 1rem;
+  color: #6b7280;
+
+  p {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+}
+
+.con__loading-spinner {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: con-spin 0.8s linear infinite;
+}
+
+@keyframes con-spin {
+  to { transform: rotate(360deg); }
+}
+
+// ─── KPI Cards ──────────────────────────────────────────────────────────────
+.con__kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $gap;
+  margin-bottom: $gap;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ─── Card ────────────────────────────────────────────────────────────────────
+.con__card {
+  background: #fff;
+  border: $card-border;
+  border-radius: $card-radius;
+  box-shadow: $card-shadow;
+  overflow: hidden;
+  margin-bottom: $gap;
+}
+
+.con__card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.125rem;
+  border-bottom: 1px solid #f3f4f6;
+
+  h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .material-icons {
+    font-size: 1.25rem;
+    color: #6366f1;
+  }
+}
+
+// ─── Table Wrapper ───────────────────────────────────────────────────────────
+.con__table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+// ─── Main Table ──────────────────────────────────────────────────────────────
+.con__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  background: #fff;
+  border: $card-border;
+  border-radius: $card-radius;
+  overflow: hidden;
+  box-shadow: $card-shadow;
+
+  &--comparison {
+    font-size: 0.85rem;
+  }
+}
+
+.con__th {
+  background: #f8fafc;
+  color: #374151;
+  font-weight: 600;
+  padding: 0.6rem 0.75rem;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 2px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+
+  &--code {
+    text-align: left;
+    width: 90px;
+    min-width: 90px;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #f8fafc;
+  }
+
+  &--name {
+    text-align: left;
+    min-width: 180px;
+    max-width: 220px;
+    position: sticky;
+    left: 90px;
+    z-index: 2;
+    background: #f8fafc;
+    border-right: 1px solid #e5e7eb;
+  }
+
+  &--month {
+    min-width: 88px;
+    font-size: 0.75rem;
+  }
+
+  &--total {
+    min-width: 110px;
+    background: #eff6ff;
+    border-left: 2px solid #bfdbfe;
+  }
+
+  &--category {
+    text-align: left;
+    min-width: 140px;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #f8fafc;
+    border-right: 1px solid #e5e7eb;
+  }
+
+  &--firm {
+    min-width: 140px;
+  }
+}
+
+// ─── Section Headers ─────────────────────────────────────────────────────────
+.con__section-header td {
+  background: #1e293b;
+  color: #f1f5f9;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.75rem;
+}
+
+// ─── Data Rows ───────────────────────────────────────────────────────────────
+.con__td {
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  color: #374151;
+  white-space: nowrap;
+
+  &--code {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.75rem;
+    color: #6b7280;
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 1;
+  }
+
+  &--name {
+    text-align: left;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    position: sticky;
+    left: 90px;
+    background: #fff;
+    z-index: 1;
+    border-right: 1px solid #e5e7eb;
+    color: #111827;
+  }
+
+  &--amount {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: #374151;
+  }
+
+  &--total {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    background: #eff6ff;
+    border-left: 2px solid #bfdbfe;
+    color: #1e3a5f;
+  }
+
+  &--subtotal {
+    font-weight: 700;
+  }
+
+  &--net {
+    color: #1d4ed8;
+  }
+
+  &--negative {
+    color: #dc2626 !important;
+  }
+
+  &--category {
+    font-weight: 600;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #fff;
+    border-right: 1px solid #e5e7eb;
+  }
+
+  &--gelir-label {
+    color: #166534;
+    background: $color-gelir-bg;
+  }
+
+  &--gider-label {
+    color: #991b1b;
+    background: $color-gider-bg;
+  }
+}
+
+.con__row {
+  transition: background 0.1s;
+
+  &:hover td {
+    background: #fafafa;
+  }
+
+  &--gelir:hover td {
+    background: $color-gelir-bg;
+  }
+
+  &--gider:hover td {
+    background: $color-gider-bg;
+  }
+}
+
+// ─── Subtotal Rows ───────────────────────────────────────────────────────────
+.con__subtotal {
+  td {
+    font-weight: 700;
+    font-size: 0.82rem;
+  }
+
+  &--gelir td {
+    background: $color-gelir-bg;
+    color: #166534;
+    border-top: 2px solid $color-gelir-border;
+    border-bottom: 2px solid $color-gelir-border;
+  }
+
+  &--gider td {
+    background: $color-gider-bg;
+    color: #991b1b;
+    border-top: 2px solid $color-gider-border;
+    border-bottom: 2px solid $color-gider-border;
+  }
+}
+
+// ─── NET KAR/ZARAR Row ───────────────────────────────────────────────────────
+.con__net-row td {
+  background: #1e293b;
+  color: #f1f5f9;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border-top: 3px solid #334155;
+}
+
+// ─── Comparison Table ────────────────────────────────────────────────────────
+.con__comparison-row {
+  &--net td {
+    background: #f5f3ff;
+    color: #4c1d95;
+    font-weight: 700;
+    border-top: 2px solid #ddd6fe;
+  }
+}
+
+// ─── Charts Row ──────────────────────────────────────────────────────────────
+.con__charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $gap;
+  margin-bottom: $gap;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.con__chart-container {
+  height: 300px;
+  padding: 1rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  canvas {
+    max-height: 280px;
+  }
+}
+
+.con__chart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: #9ca3af;
+  font-size: 0.875rem;
+
+  .material-icons {
+    font-size: 2.5rem;
+    color: #d1d5db;
+  }
+
+  p { margin: 0; }
+}
+
+// ─── Firm Cards ──────────────────────────────────────────────────────────────
+.con__firm-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: $gap;
+  margin-bottom: $gap;
+}
+
+.con__firm-card {
+  background: #fff;
+  border: $card-border;
+  border-radius: $card-radius;
+  box-shadow: $card-shadow;
+  overflow: hidden;
+}
+
+.con__firm-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+
+  h4 {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .material-icons {
+    font-size: 1.1rem;
+    color: #6366f1;
+    flex-shrink: 0;
+  }
+}
+
+.con__firm-card-body {
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.con__firm-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+
+  &--net {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 0.375rem;
+    margin-top: 0.125rem;
+  }
+}
+
+.con__firm-stat-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.con__firm-stat-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: #111827;
+
+  &--gelir { color: #166534; }
+  &--gider { color: #991b1b; }
+  &--positive { color: #166534; }
+  &--negative { color: #dc2626; }
+}
+
+// ─── Top Performers ──────────────────────────────────────────────────────────
+.con__top-performers {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $gap;
+  margin-bottom: $gap;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.con__performer-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  background: #fff;
+  border: $card-border;
+  border-radius: $card-radius;
+  box-shadow: $card-shadow;
+  padding: 1rem 1.25rem;
+
+  .material-icons {
+    font-size: 2rem;
+    flex-shrink: 0;
+  }
+
+  &--gelir {
+    border-left: 4px solid $color-gelir;
+
+    .material-icons {
+      color: $color-gelir;
+    }
+  }
+
+  &--gider {
+    border-left: 4px solid $color-gider;
+
+    .material-icons {
+      color: $color-gider;
+    }
+  }
+}
+
+.con__performer-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.25rem;
+}
+
+.con__performer-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+// ─── Print ───────────────────────────────────────────────────────────────────
+@media print {
+  .con__toolbar,
+  .con__notice,
+  .con__tabs {
+    display: none;
+  }
+
+  .con__table {
+    font-size: 0.7rem;
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+
+  .con__th,
+  .con__td {
+    padding: 0.3rem 0.4rem;
+    border: 1px solid #ccc;
+  }
+
+  .con__net-row td {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .con__subtotal--gelir td,
+  .con__subtotal--gider td {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

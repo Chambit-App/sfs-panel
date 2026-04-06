@@ -1,0 +1,354 @@
+<app-page-header
+  title="Konsolide Raporlama"
+  subtitle="Tüm firmalar birleşik görünümü"
+/>
+
+<!-- No Tenant Selected -->
+@if (!activeTenant() && !loading()) {
+  <div class="con__empty">
+    <span class="material-icons con__empty-icon">domain</span>
+    <h3>Kiracı Seçilmedi</h3>
+    <p>Konsolide raporları görmek için lütfen bir kiracı seçin.</p>
+  </div>
+}
+
+@if (activeTenant()) {
+  <!-- Active-firm notice -->
+  @if (activeFirm()) {
+    <div class="con__notice">
+      <span class="material-icons">info</span>
+      <span>Konsolide rapor tüm firmaları kapsar — aktif firma seçiminden bağımsız çalışır.</span>
+    </div>
+  }
+
+  <!-- Toolbar: Year + Tabs -->
+  <div class="con__toolbar">
+    <div class="con__tabs">
+      <button
+        class="con__tab"
+        [class.con__tab--active]="activeTab() === 'report'"
+        (click)="setTab('report')"
+      >
+        <span class="material-icons">table_chart</span>
+        Konsolide Gelir Gider Tablosu
+      </button>
+      <button
+        class="con__tab"
+        [class.con__tab--active]="activeTab() === 'comparison'"
+        (click)="setTab('comparison')"
+      >
+        <span class="material-icons">compare</span>
+        Firma Karşılaştırması
+      </button>
+    </div>
+
+    <div class="con__year-selector">
+      <label for="yearSelect" class="con__year-label">
+        <span class="material-icons">calendar_today</span>
+        Yıl:
+      </label>
+      <select
+        id="yearSelect"
+        class="con__year-select"
+        [ngModel]="selectedYear()"
+        (ngModelChange)="onYearChange($event)"
+      >
+        @for (y of availableYears; track y) {
+          <option [value]="y">{{ y }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  @if (loading()) {
+    <div class="con__loading">
+      <span class="con__loading-spinner"></span>
+      <p>Veriler yükleniyor...</p>
+    </div>
+  }
+
+  @if (!loading()) {
+    <!-- KPI Cards -->
+    <div class="con__kpis">
+      <app-kpi-card
+        title="Toplam Gelir"
+        [value]="kpis().totalGelir"
+        icon="trending_up"
+        trend="up"
+        format="currency"
+      />
+      <app-kpi-card
+        title="Toplam Gider"
+        [value]="kpis().totalGelir"
+        icon="trending_down"
+        trend="down"
+        format="currency"
+      />
+      <app-kpi-card
+        title="Net Kar / Zarar"
+        [value]="kpis().net"
+        icon="account_balance_wallet"
+        [trend]="netTrend()"
+        format="currency"
+      />
+      <app-kpi-card
+        title="Firma Sayısı"
+        [value]="kpis().firmCount"
+        icon="business"
+        trend="neutral"
+        format="number"
+      />
+    </div>
+
+    <!-- ─── TAB 1: Konsolide Gelir Gider Tablosu ─────────────────────────── -->
+    @if (activeTab() === 'report') {
+      @if (consolidatedRows().length === 0) {
+        <div class="con__empty con__empty--inline">
+          <span class="material-icons con__empty-icon">table_chart</span>
+          <h3>Veri Bulunamadı</h3>
+          <p>{{ selectedYear() }} yılı için konsolide veri mevcut değil.</p>
+        </div>
+      } @else {
+        <div class="con__table-wrapper">
+          <table class="con__table">
+            <thead>
+              <tr>
+                <th class="con__th con__th--code">Hesap Kodu</th>
+                <th class="con__th con__th--name">Hesap Adı</th>
+                @for (m of months; track m) {
+                  <th class="con__th con__th--month">{{ m }}</th>
+                }
+                <th class="con__th con__th--total">Yıllık Toplam</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- GELİRLER Section -->
+              <tr class="con__section-header">
+                <td colspan="15">GELİRLER</td>
+              </tr>
+              @for (row of gelirsRows(); track row.account_code) {
+                <tr class="con__row con__row--gelir">
+                  <td class="con__td con__td--code">{{ row.account_code }}</td>
+                  <td class="con__td con__td--name">{{ row.account_name }}</td>
+                  @for (val of row.monthly; track $index) {
+                    <td class="con__td con__td--amount">
+                      {{ val !== 0 ? formatCurrency(val) : '—' }}
+                    </td>
+                  }
+                  <td class="con__td con__td--total">{{ formatCurrency(row.annual_total) }}</td>
+                </tr>
+              }
+              <!-- Toplam Gelir subtotal -->
+              <tr class="con__subtotal con__subtotal--gelir">
+                <td class="con__td" colspan="2">Toplam Gelir</td>
+                @for (val of totalGelirMonthly(); track $index) {
+                  <td class="con__td con__td--amount con__td--subtotal">{{ formatCurrency(val) }}</td>
+                }
+                <td class="con__td con__td--total con__td--subtotal">{{ formatCurrency(totalGelirAnnual()) }}</td>
+              </tr>
+
+              <!-- GİDERLER Section -->
+              <tr class="con__section-header">
+                <td colspan="15">GİDERLER</td>
+              </tr>
+              @for (row of giderRows(); track row.account_code) {
+                <tr class="con__row con__row--gider">
+                  <td class="con__td con__td--code">{{ row.account_code }}</td>
+                  <td class="con__td con__td--name">{{ row.account_name }}</td>
+                  @for (val of row.monthly; track $index) {
+                    <td class="con__td con__td--amount">
+                      {{ val !== 0 ? formatCurrency(val) : '—' }}
+                    </td>
+                  }
+                  <td class="con__td con__td--total">{{ formatCurrency(row.annual_total) }}</td>
+                </tr>
+              }
+              <!-- Toplam Gider subtotal -->
+              <tr class="con__subtotal con__subtotal--gider">
+                <td class="con__td" colspan="2">Toplam Gider</td>
+                @for (val of totalGiderMonthly(); track $index) {
+                  <td class="con__td con__td--amount con__td--subtotal">{{ formatCurrency(val) }}</td>
+                }
+                <td class="con__td con__td--total con__td--subtotal">{{ formatCurrency(totalGiderAnnual()) }}</td>
+              </tr>
+
+              <!-- NET KAR/ZARAR -->
+              <tr class="con__net-row">
+                <td class="con__td" colspan="2">NET KAR / ZARAR</td>
+                @for (val of netMonthly(); track $index) {
+                  <td class="con__td con__td--amount con__td--net" [class.con__td--negative]="val < 0">
+                    {{ formatCurrency(val) }}
+                  </td>
+                }
+                <td class="con__td con__td--total con__td--net" [class.con__td--negative]="netAnnual() < 0">
+                  {{ formatCurrency(netAnnual()) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+
+    <!-- ─── TAB 2: Firma Karşılaştırması ─────────────────────────────────── -->
+    @if (activeTab() === 'comparison') {
+      @if (firmBreakdown().length === 0) {
+        <div class="con__empty con__empty--inline">
+          <span class="material-icons con__empty-icon">compare</span>
+          <h3>Karşılaştırma Verisi Yok</h3>
+          <p>{{ selectedYear() }} yılı için firma verisi bulunamadı.</p>
+        </div>
+      } @else {
+        <!-- Summary comparison table -->
+        <div class="con__card">
+          <div class="con__card-header">
+            <span class="material-icons">table_view</span>
+            <h3>Firma Özet Karşılaştırması — {{ selectedYear() }}</h3>
+          </div>
+          <div class="con__table-wrapper">
+            <table class="con__table con__table--comparison">
+              <thead>
+                <tr>
+                  <th class="con__th con__th--category">Kategori</th>
+                  @for (firm of firmBreakdown(); track firm.firm_id) {
+                    <th class="con__th con__th--firm">{{ firm.firm_name }}</th>
+                  }
+                  <th class="con__th con__th--total">Toplam</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="con__comparison-row">
+                  <td class="con__td con__td--category con__td--gelir-label">Toplam Gelir</td>
+                  @for (firm of firmBreakdown(); track firm.firm_id) {
+                    <td class="con__td con__td--amount">{{ formatCurrency(firm.total_gelir) }}</td>
+                  }
+                  <td class="con__td con__td--total">{{ formatCurrency(kpis().totalGelir) }}</td>
+                </tr>
+                <tr class="con__comparison-row">
+                  <td class="con__td con__td--category con__td--gider-label">Toplam Gider</td>
+                  @for (firm of firmBreakdown(); track firm.firm_id) {
+                    <td class="con__td con__td--amount">{{ formatCurrency(firm.total_gider) }}</td>
+                  }
+                  <td class="con__td con__td--total">{{ formatCurrency(kpis().totalGider) }}</td>
+                </tr>
+                <tr class="con__comparison-row con__comparison-row--net">
+                  <td class="con__td con__td--category">Net Kar/Zarar</td>
+                  @for (firm of firmBreakdown(); track firm.firm_id) {
+                    <td class="con__td con__td--amount" [class.con__td--negative]="firm.net < 0">
+                      {{ formatCurrency(firm.net) }}
+                    </td>
+                  }
+                  <td class="con__td con__td--total" [class.con__td--negative]="kpis().net < 0">
+                    {{ formatCurrency(kpis().net) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Firm Cards -->
+        <div class="con__firm-cards">
+          @for (firm of firmBreakdown(); track firm.firm_id) {
+            <div class="con__firm-card">
+              <div class="con__firm-card-header">
+                <span class="material-icons">business</span>
+                <h4>{{ firm.firm_name }}</h4>
+              </div>
+              <div class="con__firm-card-body">
+                <div class="con__firm-stat">
+                  <span class="con__firm-stat-label">Gelir</span>
+                  <span class="con__firm-stat-value con__firm-stat-value--gelir">
+                    ₺{{ formatCurrency(firm.total_gelir) }}
+                  </span>
+                </div>
+                <div class="con__firm-stat">
+                  <span class="con__firm-stat-label">Gider</span>
+                  <span class="con__firm-stat-value con__firm-stat-value--gider">
+                    ₺{{ formatCurrency(firm.total_gider) }}
+                  </span>
+                </div>
+                <div class="con__firm-stat con__firm-stat--net">
+                  <span class="con__firm-stat-label">Net</span>
+                  <span
+                    class="con__firm-stat-value"
+                    [class.con__firm-stat-value--positive]="firm.net >= 0"
+                    [class.con__firm-stat-value--negative]="firm.net < 0"
+                  >
+                    ₺{{ formatCurrency(firm.net) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Charts Row -->
+        <div class="con__charts">
+          <!-- Bar Chart: Gelir/Gider per firm -->
+          <div class="con__card">
+            <div class="con__card-header">
+              <span class="material-icons">bar_chart</span>
+              <h3>Firma Gelir / Gider Karşılaştırması</h3>
+            </div>
+            <div class="con__chart-container">
+              @if (barChartData().labels && barChartData().labels!.length > 0) {
+                <canvas baseChart
+                  [data]="barChartData()"
+                  [options]="barChartOptions"
+                  type="bar">
+                </canvas>
+              } @else {
+                <div class="con__chart-empty">
+                  <span class="material-icons">bar_chart</span>
+                  <p>Grafik için veri bulunamadı.</p>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Pie Chart: Revenue share -->
+          <div class="con__card">
+            <div class="con__card-header">
+              <span class="material-icons">pie_chart</span>
+              <h3>Firma Gelir Payı</h3>
+            </div>
+            <div class="con__chart-container">
+              @if (pieChartData().labels && pieChartData().labels!.length > 0) {
+                <canvas baseChart
+                  [data]="pieChartData()"
+                  [options]="pieChartOptions"
+                  type="pie">
+                </canvas>
+              } @else {
+                <div class="con__chart-empty">
+                  <span class="material-icons">pie_chart</span>
+                  <p>Gelir verisi bulunamadı.</p>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Top performers -->
+        <div class="con__top-performers">
+          <div class="con__performer-card con__performer-card--gelir">
+            <span class="material-icons">emoji_events</span>
+            <div>
+              <div class="con__performer-label">En Yüksek Gelir</div>
+              <div class="con__performer-name">{{ kpis().topRevenueFirm || '—' }}</div>
+            </div>
+          </div>
+          <div class="con__performer-card con__performer-card--gider">
+            <span class="material-icons">trending_down</span>
+            <div>
+              <div class="con__performer-label">En Yüksek Gider</div>
+              <div class="con__performer-name">{{ kpis().topExpenseFirm || '—' }}</div>
+            </div>
+          </div>
+        </div>
+      }
+    }
+  }
+}

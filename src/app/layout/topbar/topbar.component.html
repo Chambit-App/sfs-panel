@@ -1,0 +1,125 @@
+<header class="topbar">
+
+  <!-- ===== LEFT SECTION ===== -->
+  <div class="topbar__left" (click)="$event.stopPropagation()">
+
+    <!-- Hamburger button (mobile only) -->
+    @if (showHamburger()) {
+      <button class="topbar__hamburger hide-desktop" (click)="onHamburgerClick($event)" title="Menü">
+        <span class="material-icons">menu</span>
+      </button>
+    }
+
+    <!-- Tenant selector (super_admin only) -->
+    @if (auth.isSuperAdmin()) {
+      <div class="topbar__dropdown" [class.topbar__dropdown--open]="tenantDropdownOpen()">
+        <button class="topbar__selector" (click)="toggleTenantDropdown()">
+          <span class="material-icons topbar__selector-icon">domain</span>
+          <span class="topbar__selector-label hide-mobile">
+            {{ tenantService.activeTenant()?.name ?? 'Tenant Seçiniz' }}
+          </span>
+          <span class="material-icons topbar__selector-chevron hide-mobile">expand_more</span>
+        </button>
+        @if (tenantDropdownOpen()) {
+          <div class="topbar__dropdown-menu">
+            @for (tenant of tenantService.tenants(); track tenant.id) {
+              <button
+                class="topbar__dropdown-item"
+                [class.topbar__dropdown-item--active]="tenantService.activeTenant()?.id === tenant.id"
+                (click)="selectTenant(tenant)"
+              >
+                <span class="material-icons topbar__dropdown-item-icon">domain</span>
+                <div class="topbar__dropdown-item-info">
+                  <span class="topbar__dropdown-item-name">{{ tenant.name }}</span>
+                  <span class="topbar__dropdown-item-sub">{{ tenant.tax_no }}</span>
+                </div>
+                @if (tenantService.activeTenant()?.id === tenant.id) {
+                  <span class="material-icons topbar__dropdown-item-check">check</span>
+                }
+              </button>
+            }
+            @if (tenantService.tenants().length === 0) {
+              <div class="topbar__dropdown-empty">Tenant bulunamadı</div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Firm selector -->
+    @if (tenantService.activeTenant()) {
+      <div class="topbar__dropdown" [class.topbar__dropdown--open]="firmDropdownOpen()">
+        <button class="topbar__selector" (click)="toggleFirmDropdown()">
+          <span class="material-icons topbar__selector-icon">business</span>
+          <span class="topbar__selector-label hide-mobile">
+            {{ tenantService.activeFirm()?.name ?? 'Tüm Firmalar' }}
+          </span>
+          <span class="material-icons topbar__selector-chevron hide-mobile">expand_more</span>
+        </button>
+        @if (firmDropdownOpen()) {
+          <div class="topbar__dropdown-menu">
+            <!-- All firms option -->
+            <button
+              class="topbar__dropdown-item"
+              [class.topbar__dropdown-item--active]="tenantService.activeFirm() === null"
+              (click)="selectFirm(null)"
+            >
+              <span class="material-icons topbar__dropdown-item-icon">layers</span>
+              <div class="topbar__dropdown-item-info">
+                <span class="topbar__dropdown-item-name">Tüm Firmalar</span>
+                <span class="topbar__dropdown-item-sub">Konsolide görünüm</span>
+              </div>
+              @if (tenantService.activeFirm() === null) {
+                <span class="material-icons topbar__dropdown-item-check">check</span>
+              }
+            </button>
+            <div class="topbar__dropdown-divider"></div>
+            @for (firm of tenantService.firms(); track firm.id) {
+              <button
+                class="topbar__dropdown-item"
+                [class.topbar__dropdown-item--active]="tenantService.activeFirm()?.id === firm.id"
+                (click)="selectFirm(firm)"
+              >
+                <span class="material-icons topbar__dropdown-item-icon">business</span>
+                <div class="topbar__dropdown-item-info">
+                  <span class="topbar__dropdown-item-name">{{ firm.name }}</span>
+                  <span class="topbar__dropdown-item-sub">{{ firm.tax_no }}</span>
+                </div>
+                @if (tenantService.activeFirm()?.id === firm.id) {
+                  <span class="material-icons topbar__dropdown-item-check">check</span>
+                }
+              </button>
+            }
+            @if (tenantService.firms().length === 0) {
+              <div class="topbar__dropdown-empty">Firma bulunamadı</div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+  </div>
+
+  <!-- ===== RIGHT SECTION ===== -->
+  <div class="topbar__right">
+    @if (auth.currentUser(); as user) {
+      <div class="topbar__user">
+        <div class="topbar__user-avatar">
+          {{ user.full_name.charAt(0).toUpperCase() }}
+        </div>
+        <div class="topbar__user-info hide-mobile">
+          <span class="topbar__user-name">{{ user.full_name }}</span>
+          <span class="badge topbar__user-role" [class]="'badge ' + roleClass">
+            {{ roleLabel }}
+          </span>
+        </div>
+      </div>
+      <div class="topbar__divider hide-mobile"></div>
+    }
+    <button class="topbar__signout" (click)="signOut()" title="Çıkış Yap">
+      <span class="material-icons">logout</span>
+      <span class="topbar__signout-label hide-mobile">Çıkış</span>
+    </button>
+  </div>
+
+</header>

@@ -1,0 +1,476 @@
+// ============================================================
+// Reports Component Styles
+// ============================================================
+
+// ── Loading / Empty states ───────────────────────────────────────────────────
+.reports__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-2xl);
+  color: var(--color-text-secondary);
+}
+
+.reports__loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.reports__empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-2xl);
+  color: var(--color-text-secondary);
+  text-align: center;
+
+  .material-icons {
+    font-size: 48px;
+    color: var(--color-text-muted);
+  }
+
+  h3 {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  p {
+    font-size: var(--font-size-sm);
+    max-width: 320px;
+  }
+
+  &--sm {
+    padding: var(--space-xl);
+
+    .material-icons { font-size: 36px; }
+    h3 { font-size: var(--font-size-md); }
+  }
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+.reports__tabs {
+  display: flex;
+  gap: var(--space-xs);
+  border-bottom: 2px solid var(--color-border);
+  margin-bottom: var(--space-lg);
+}
+
+.reports__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+
+  .material-icons { font-size: 18px; }
+
+  &:hover {
+    color: var(--color-text-primary);
+  }
+
+  &--active {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+  }
+}
+
+// ── Toolbar ──────────────────────────────────────────────────────────────────
+.reports__toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+}
+
+.reports__control-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.reports__control-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+}
+
+.reports__year-select {
+  min-width: 100px;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.12);
+  }
+}
+
+// ── KPI Row ──────────────────────────────────────────────────────────────────
+.reports__kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.reports__kpi-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md) var(--space-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+
+  &--top-expense {
+    border-left: 4px solid var(--color-warning);
+  }
+}
+
+.reports__kpi-icon {
+  font-size: 32px;
+  color: var(--color-warning);
+  flex-shrink: 0;
+}
+
+.reports__kpi-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.reports__kpi-title {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+}
+
+.reports__kpi-value {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reports__kpi-sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+// ── Table wrapper ─────────────────────────────────────────────────────────────
+.reports__table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  background: var(--color-card);
+  margin-bottom: var(--space-lg);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+// ── Table ─────────────────────────────────────────────────────────────────────
+.reports__table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  thead tr {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+  }
+
+  th, td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--color-border-light);
+    border-right: 1px solid var(--color-border-light);
+
+    &:last-child { border-right: none; }
+  }
+
+  th {
+    font-weight: 600;
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: center;
+  }
+}
+
+// ── Sticky columns ────────────────────────────────────────────────────────────
+.sticky-col {
+  position: sticky;
+  z-index: 5;
+  background: inherit;
+
+  &--1 {
+    left: 0;
+    min-width: 100px;
+    max-width: 120px;
+  }
+
+  &--2 {
+    left: 120px;
+    min-width: 200px;
+    max-width: 280px;
+    border-right: 2px solid var(--color-border) !important;
+  }
+}
+
+thead .sticky-col {
+  z-index: 15;
+  background: var(--color-primary);
+}
+
+// ── Column widths ─────────────────────────────────────────────────────────────
+.reports__col-code {
+  min-width: 100px;
+  text-align: left;
+  font-family: monospace;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.reports__col-name {
+  min-width: 200px;
+  text-align: left;
+  font-weight: 500;
+}
+
+.reports__col-month {
+  min-width: 80px;
+  text-align: right;
+}
+
+.reports__col-total {
+  min-width: 110px;
+  text-align: right;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.reports__col-diff {
+  min-width: 100px;
+  text-align: right;
+}
+
+.reports__col-pct {
+  min-width: 80px;
+  text-align: right;
+}
+
+// ── Row variants ──────────────────────────────────────────────────────────────
+
+// Section header: GELİRLER / GİDERLER
+.reports__section-header td {
+  background: var(--color-primary-light);
+  color: var(--color-text-inverse);
+  font-weight: 700;
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 6px 10px;
+  position: sticky;
+  left: 0;
+}
+
+// Group header row (parent code like 740.10)
+.reports__row--group {
+  background: #f0f1f5;
+
+  td {
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .sticky-col {
+    background: #f0f1f5;
+  }
+}
+
+// Child rows
+.reports__row--child {
+  background: var(--color-card);
+
+  .sticky-col {
+    background: var(--color-card);
+  }
+
+  &:hover {
+    background: #f9f9fb;
+
+    .sticky-col { background: #f9f9fb; }
+  }
+}
+
+// Indented name for child rows
+.reports__name--indented {
+  padding-left: 24px !important;
+}
+
+// Subtotal row (TOPLAM GELİR, TOPLAM GİDER)
+.reports__row--subtotal {
+  background: #e8eaf0;
+  border-top: 2px solid var(--color-border);
+
+  td {
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  .sticky-col { background: #e8eaf0; }
+
+  .reports__subtotal-label {
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+}
+
+// Net KAR/ZARAR row
+.reports__row--net {
+  border-top: 3px double var(--color-border);
+
+  td {
+    font-weight: 800;
+    font-size: var(--font-size-sm);
+  }
+
+  .reports__subtotal-label {
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+}
+
+.reports__row--net-positive {
+  background: rgba(46, 204, 113, 0.12);
+  td { color: #1a8a45; }
+  .sticky-col { background: rgba(46, 204, 113, 0.12); }
+}
+
+.reports__row--net-negative {
+  background: rgba(231, 76, 60, 0.10);
+  td { color: #c0392b; }
+  .sticky-col { background: rgba(231, 76, 60, 0.10); }
+}
+
+// ── Cell variants ─────────────────────────────────────────────────────────────
+.reports__cell--number {
+  font-family: 'Courier New', monospace;
+  font-size: var(--font-size-xs);
+  text-align: right;
+}
+
+.reports__cell--total {
+  font-weight: 600;
+  border-left: 1px solid var(--color-border) !important;
+}
+
+.reports__cell--positive {
+  color: #1a8a45;
+}
+
+.reports__cell--negative {
+  color: #c0392b;
+}
+
+// ── YoY table ─────────────────────────────────────────────────────────────────
+.reports__table--yoy {
+  .reports__yoy-header-top th {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .reports__yoy-header-sub {
+    background: var(--color-primary-light);
+
+    th {
+      font-size: 10px;
+      padding: 4px 6px;
+    }
+  }
+
+  .reports__col-month-group {
+    text-align: center;
+    border-right: 2px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .reports__col-total-group {
+    background: rgba(0, 0, 0, 0.15);
+    border-right: 2px solid rgba(255, 255, 255, 0.3);
+  }
+}
+
+.reports__col-year1 {
+  background: rgba(52, 152, 219, 0.04);
+}
+
+.reports__col-year2 {
+  background: rgba(46, 204, 113, 0.04);
+  border-right: 1px solid var(--color-border-light);
+}
+
+// ── Chart card ────────────────────────────────────────────────────────────────
+.reports__chart-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.reports__chart-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-md);
+}
+
+.reports__chart-container {
+  height: 280px;
+  position: relative;
+}

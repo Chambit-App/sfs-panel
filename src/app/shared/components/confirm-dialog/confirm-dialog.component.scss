@@ -1,0 +1,89 @@
+.confirm-dialog {
+  &__overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-modal, 300);
+    padding: 16px;
+    animation: overlayIn 0.2s ease;
+  }
+
+  @keyframes overlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  &__panel {
+    background: var(--color-card, #ffffff);
+    border-radius: var(--radius-xl, 16px);
+    padding: 32px;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.12));
+    animation: panelIn 0.2s ease;
+  }
+
+  @keyframes panelIn {
+    from {
+      opacity: 0;
+      transform: scale(0.96) translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  &__icon-wrapper {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(233, 69, 96, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__icon {
+    font-size: 28px;
+    color: var(--color-accent, #e94560);
+  }
+
+  &__title {
+    font-size: var(--font-size-xl, 1.25rem);
+    font-weight: 700;
+    color: var(--color-text-primary, #1a1a2e);
+  }
+
+  &__message {
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-text-secondary, #6b7280);
+    text-align: center;
+    line-height: 1.6;
+    margin-bottom: 28px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+
+    .btn {
+      flex: 1;
+      justify-content: center;
+    }
+  }
+}

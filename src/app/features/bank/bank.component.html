@@ -1,0 +1,479 @@
+<app-page-header
+  title="Banka Hesap Yönetimi"
+  subtitle="Banka hesaplarınızı ve transferlerinizi yönetin"
+/>
+
+<!-- No firm selected -->
+@if (!hasFirm) {
+  <div class="bank__empty-state">
+    <span class="material-icons">account_balance</span>
+    <p>Devam etmek için üst menüden bir firma seçin.</p>
+  </div>
+} @else {
+
+  <!-- KPI Row -->
+  <div class="bank__kpi-row">
+    <app-kpi-card
+      title="Toplam Bakiye"
+      [value]="totalBalance()"
+      icon="account_balance_wallet"
+      format="currency"
+      [trend]="totalBalance() >= 0 ? 'up' : 'down'"
+    />
+    <app-kpi-card
+      title="Aktif Hesap Sayısı"
+      [value]="activeAccountCount()"
+      icon="account_balance"
+      format="number"
+      trend="neutral"
+    />
+    <app-kpi-card
+      title="Toplam Hesap"
+      [value]="accounts().length"
+      icon="layers"
+      format="number"
+      trend="neutral"
+    />
+  </div>
+
+  <!-- Tabs -->
+  <div class="bank__tabs">
+    <button
+      class="bank__tab-btn"
+      [class.bank__tab-btn--active]="activeTab() === 'accounts'"
+      (click)="switchTab('accounts')"
+    >
+      <span class="material-icons">account_balance</span>
+      Banka Hesapları
+    </button>
+    <button
+      class="bank__tab-btn"
+      [class.bank__tab-btn--active]="activeTab() === 'transfers'"
+      (click)="switchTab('transfers')"
+    >
+      <span class="material-icons">swap_horiz</span>
+      Transferler
+    </button>
+  </div>
+
+  <!-- ── TAB: ACCOUNTS ─────────────────────────────────────── -->
+  @if (activeTab() === 'accounts') {
+    <div class="bank__section">
+      <div class="bank__section-header">
+        <h2 class="bank__section-title">Banka Hesapları</h2>
+        <button class="btn btn--primary" (click)="openAddAccount()">
+          <span class="material-icons">add</span>
+          Yeni Hesap Ekle
+        </button>
+      </div>
+
+      @if (loading()) {
+        <div class="bank__loading">
+          <span class="material-icons bank__spin">sync</span>
+          Yükleniyor...
+        </div>
+      } @else if (accounts().length === 0) {
+        <div class="bank__empty-state">
+          <span class="material-icons">account_balance</span>
+          <p>Henüz banka hesabı eklenmemiş.</p>
+          <button class="btn btn--primary" (click)="openAddAccount()">
+            <span class="material-icons">add</span>
+            İlk Hesabı Ekle
+          </button>
+        </div>
+      } @else {
+        <div class="bank__accounts-grid">
+          @for (account of accounts(); track account.id) {
+            <div class="bank-card" [class.bank-card--inactive]="!account.is_active">
+              <div class="bank-card__header">
+                <div class="bank-card__icon">
+                  <span class="material-icons">account_balance</span>
+                </div>
+                <div class="bank-card__info">
+                  <h3 class="bank-card__name">{{ account.bank_name }}</h3>
+                  <span class="bank-card__account-no">{{ account.account_no }}</span>
+                </div>
+                <div class="bank-card__status">
+                  @if (account.is_active) {
+                    <span class="badge badge--success">Aktif</span>
+                  } @else {
+                    <span class="badge badge--neutral">Pasif</span>
+                  }
+                </div>
+              </div>
+
+              @if (account.iban) {
+                <div class="bank-card__iban">
+                  <span class="material-icons">credit_card</span>
+                  <span class="bank-card__iban-text">{{ account.iban }}</span>
+                </div>
+              }
+
+              <div class="bank-card__balance" [class.bank-card__balance--negative]="account.balance < 0">
+                <span class="bank-card__balance-label">Güncel Bakiye</span>
+                <span class="bank-card__balance-amount">
+                  {{ account.balance | currencyTry }}
+                  <span class="bank-card__currency">{{ account.currency }}</span>
+                </span>
+              </div>
+
+              <div class="bank-card__actions">
+                <button class="btn btn--ghost btn--sm" (click)="openEditAccount(account)" title="Düzenle">
+                  <span class="material-icons">edit</span>
+                  Düzenle
+                </button>
+                <button class="btn btn--ghost btn--sm" (click)="openTransactions(account)" title="İşlemler">
+                  <span class="material-icons">receipt_long</span>
+                  İşlemler
+                </button>
+                <button class="btn btn--ghost btn--sm bank-card__delete-btn" (click)="confirmDeleteAccount(account.id)" title="Sil">
+                  <span class="material-icons">delete</span>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ── TAB: TRANSFERS ────────────────────────────────────── -->
+  @if (activeTab() === 'transfers') {
+    <div class="bank__section">
+      <div class="bank__section-header">
+        <h2 class="bank__section-title">Transferler</h2>
+        <button class="btn btn--primary" (click)="openAddTransfer()">
+          <span class="material-icons">add</span>
+          Yeni Transfer
+        </button>
+      </div>
+
+      <!-- Date filters -->
+      <div class="bank__filters card">
+        <div class="form-group">
+          <label class="form-label">Başlangıç Tarihi</label>
+          <input
+            type="date"
+            class="form-control"
+            [ngModel]="transferDateFrom()"
+            (ngModelChange)="transferDateFrom.set($event)"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bitiş Tarihi</label>
+          <input
+            type="date"
+            class="form-control"
+            [ngModel]="transferDateTo()"
+            (ngModelChange)="transferDateTo.set($event)"
+          />
+        </div>
+        <div class="bank__filters-actions">
+          <button class="btn btn--primary btn--sm" (click)="applyTransferFilters()">
+            <span class="material-icons">search</span>
+            Filtrele
+          </button>
+          <button class="btn btn--secondary btn--sm" (click)="clearTransferFilters()">
+            <span class="material-icons">clear</span>
+            Temizle
+          </button>
+        </div>
+      </div>
+
+      @if (loading()) {
+        <div class="bank__loading">
+          <span class="material-icons bank__spin">sync</span>
+          Yükleniyor...
+        </div>
+      } @else if (transfers().length === 0) {
+        <div class="bank__empty-state">
+          <span class="material-icons">swap_horiz</span>
+          <p>Transfer kaydı bulunamadı.</p>
+        </div>
+      } @else {
+        <div class="card bank__table-card">
+          <table class="bank__table">
+            <thead>
+              <tr>
+                <th>Tarih</th>
+                <th>Nereden</th>
+                <th>Nereye</th>
+                <th>Tutar</th>
+                <th>Açıklama</th>
+                <th>İşlemler</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (transfer of transfers(); track transfer.id) {
+                <tr>
+                  <td>{{ transfer.date | turkishDate }}</td>
+                  <td>{{ transfer.from_bank_name }}</td>
+                  <td>{{ transfer.to_bank_name }}</td>
+                  <td class="bank__table-amount">{{ transfer.amount | currencyTry }}</td>
+                  <td class="text-secondary">{{ transfer.description || '-' }}</td>
+                  <td>
+                    <button
+                      class="btn btn--ghost btn--icon"
+                      (click)="confirmDeleteTransfer(transfer.id)"
+                      title="Sil"
+                    >
+                      <span class="material-icons">delete</span>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ── SLIDE PANEL ────────────────────────────────────────── -->
+  @if (panelMode() !== null) {
+    <div class="bank__panel-overlay" (click)="closePanel()"></div>
+    <aside class="bank__panel">
+      <div class="bank__panel-header">
+        @if (panelMode() === 'accountForm') {
+          <h3>{{ editingAccountId() ? 'Hesabı Düzenle' : 'Yeni Hesap Ekle' }}</h3>
+        } @else if (panelMode() === 'transferForm') {
+          <h3>Yeni Transfer</h3>
+        } @else if (panelMode() === 'transactions') {
+          <h3>{{ selectedAccount()?.bank_name }} - İşlemler</h3>
+        }
+        <button class="btn btn--ghost btn--icon" (click)="closePanel()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="bank__panel-body">
+
+        <!-- Account Form -->
+        @if (panelMode() === 'accountForm') {
+          <form (ngSubmit)="saveAccount()" #accountFormEl="ngForm" class="bank__form">
+            <div class="form-group">
+              <label class="form-label">Banka Adı <span class="text-danger">*</span></label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="örn. Ziraat Bankası"
+                [ngModel]="accountForm().bank_name"
+                (ngModelChange)="updateAccountForm('bank_name', $event)"
+                name="bank_name"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Hesap No <span class="text-danger">*</span></label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="örn. 1234567890"
+                [ngModel]="accountForm().account_no"
+                (ngModelChange)="updateAccountForm('account_no', $event)"
+                name="account_no"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">IBAN</label>
+              <input
+                type="text"
+                class="form-control"
+                [class.form-control--error]="ibanError()"
+                placeholder="TR00 0000 0000 0000 0000 0000 00"
+                [ngModel]="accountForm().iban"
+                (ngModelChange)="updateAccountForm('iban', $event)"
+                name="iban"
+                maxlength="26"
+              />
+              @if (ibanError()) {
+                <span class="bank__form-error">{{ ibanError() }}</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Para Birimi</label>
+              <select
+                class="form-control"
+                [ngModel]="accountForm().currency"
+                (ngModelChange)="updateAccountForm('currency', $event)"
+                name="currency"
+              >
+                <option value="TRY">TRY - Türk Lirası</option>
+                <option value="USD">USD - Amerikan Doları</option>
+                <option value="EUR">EUR - Euro</option>
+                <option value="GBP">GBP - İngiliz Sterlini</option>
+              </select>
+            </div>
+
+            <div class="form-group bank__checkbox-group">
+              <label class="bank__checkbox-label">
+                <input
+                  type="checkbox"
+                  [ngModel]="accountForm().is_active"
+                  (ngModelChange)="updateAccountForm('is_active', $event)"
+                  name="is_active"
+                />
+                <span>Hesap Aktif</span>
+              </label>
+            </div>
+
+            <div class="bank__form-actions">
+              <button type="button" class="btn btn--secondary" (click)="closePanel()">İptal</button>
+              <button type="submit" class="btn btn--primary" [disabled]="saving()">
+                @if (saving()) {
+                  <span class="material-icons bank__spin">sync</span>
+                } @else {
+                  <span class="material-icons">save</span>
+                }
+                {{ editingAccountId() ? 'Güncelle' : 'Kaydet' }}
+              </button>
+            </div>
+          </form>
+        }
+
+        <!-- Transfer Form -->
+        @if (panelMode() === 'transferForm') {
+          <form (ngSubmit)="saveTransfer()" class="bank__form">
+            <div class="form-group">
+              <label class="form-label">Nereden <span class="text-danger">*</span></label>
+              <select
+                class="form-control"
+                [ngModel]="transferForm().from_bank_id"
+                (ngModelChange)="updateTransferForm('from_bank_id', $event)"
+                name="from_bank_id"
+                required
+              >
+                <option value="">Hesap seçin...</option>
+                @for (acc of fromAccountOptions(); track acc.id) {
+                  <option [value]="acc.id">{{ acc.bank_name }} - {{ acc.account_no }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Nereye <span class="text-danger">*</span></label>
+              <select
+                class="form-control"
+                [ngModel]="transferForm().to_bank_id"
+                (ngModelChange)="updateTransferForm('to_bank_id', $event)"
+                name="to_bank_id"
+                required
+                [disabled]="!transferForm().from_bank_id"
+              >
+                <option value="">Hesap seçin...</option>
+                @for (acc of toAccountOptions(); track acc.id) {
+                  <option [value]="acc.id">{{ acc.bank_name }} - {{ acc.account_no }}</option>
+                }
+              </select>
+              @if (!transferForm().from_bank_id) {
+                <span class="bank__form-hint">Önce kaynak hesabı seçin.</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Tutar <span class="text-danger">*</span></label>
+              <input
+                type="number"
+                class="form-control"
+                placeholder="0.00"
+                min="0.01"
+                step="0.01"
+                [ngModel]="transferForm().amount"
+                (ngModelChange)="updateTransferForm('amount', $event ? +$event : null)"
+                name="amount"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Tarih <span class="text-danger">*</span></label>
+              <input
+                type="date"
+                class="form-control"
+                [ngModel]="transferForm().date"
+                (ngModelChange)="updateTransferForm('date', $event)"
+                name="date"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Açıklama</label>
+              <textarea
+                class="form-control"
+                rows="3"
+                placeholder="Transfer açıklaması..."
+                [ngModel]="transferForm().description"
+                (ngModelChange)="updateTransferForm('description', $event)"
+                name="description"
+              ></textarea>
+            </div>
+
+            <div class="bank__form-actions">
+              <button type="button" class="btn btn--secondary" (click)="closePanel()">İptal</button>
+              <button type="submit" class="btn btn--primary" [disabled]="saving()">
+                @if (saving()) {
+                  <span class="material-icons bank__spin">sync</span>
+                } @else {
+                  <span class="material-icons">swap_horiz</span>
+                }
+                Transfer Yap
+              </button>
+            </div>
+          </form>
+        }
+
+        <!-- Transactions Panel -->
+        @if (panelMode() === 'transactions') {
+          @if (loading()) {
+            <div class="bank__loading">
+              <span class="material-icons bank__spin">sync</span>
+              Yükleniyor...
+            </div>
+          } @else if (selectedAccountTransactions().length === 0) {
+            <div class="bank__empty-state bank__empty-state--sm">
+              <span class="material-icons">receipt_long</span>
+              <p>Bu hesaba ait işlem bulunamadı.</p>
+            </div>
+          } @else {
+            <app-data-table
+              [columns]="transactionColumns"
+              [data]="$any(selectedAccountTransactions())"
+              [loading]="loading()"
+            />
+          }
+        }
+
+      </div>
+    </aside>
+  }
+
+  <!-- ── CONFIRM: Delete Account ───────────────────────────── -->
+  @if (deletingAccountId()) {
+    <app-confirm-dialog
+      title="Hesabı Sil"
+      message="Bu banka hesabını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+      confirmText="Sil"
+      cancelText="İptal"
+      (confirmed)="deleteAccount()"
+      (cancelled)="deletingAccountId.set(null)"
+    />
+  }
+
+  <!-- ── CONFIRM: Delete Transfer ──────────────────────────── -->
+  @if (deletingTransferId()) {
+    <app-confirm-dialog
+      title="Transferi Sil"
+      message="Bu transfer kaydını silmek istediğinizden emin misiniz?"
+      confirmText="Sil"
+      cancelText="İptal"
+      (confirmed)="deleteTransfer()"
+      (cancelled)="deletingTransferId.set(null)"
+    />
+  }
+
+}

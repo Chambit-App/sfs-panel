@@ -1,0 +1,65 @@
+<nav class="sidebar" [class.sidebar--collapsed]="collapsed()" [class.sidebar--mobile-open]="mobileOpen()">
+
+  <!-- Brand + toggle -->
+  <div class="sidebar__brand">
+    @if (!collapsed()) {
+      <span class="sidebar__logo">SFSPanel</span>
+    }
+    <button class="sidebar__toggle" (click)="toggleCollapse()" [title]="collapsed() ? 'Menüyü Aç' : 'Menüyü Kapat'">
+      <span class="material-icons">{{ collapsed() ? 'menu' : 'menu_open' }}</span>
+    </button>
+  </div>
+
+  <!-- Nav groups -->
+  <div class="sidebar__nav-container">
+    @for (group of navGroups(); track group.groupLabel) {
+      <div class="sidebar__group">
+        @if (!collapsed()) {
+          <span class="sidebar__group-label">{{ group.groupLabel }}</span>
+        }
+        <ul class="sidebar__nav">
+          @for (item of group.items; track item.path) {
+            <li class="sidebar__nav-item">
+              <a
+                [routerLink]="item.path"
+                routerLinkActive="sidebar__nav-link--active"
+                class="sidebar__nav-link"
+                [title]="collapsed() ? item.label : ''"
+                (click)="onNavClick()"
+              >
+                <span class="sidebar__nav-icon material-icons">{{ item.icon }}</span>
+                @if (!collapsed()) {
+                  <span class="sidebar__nav-label">{{ item.label }}</span>
+                }
+              </a>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </div>
+
+  <!-- Active firm footer -->
+  @if (!collapsed()) {
+    <div class="sidebar__footer">
+      @if (tenantService.activeFirm(); as firm) {
+        <div class="sidebar__active-firm">
+          <span class="material-icons sidebar__active-firm-icon">business</span>
+          <div class="sidebar__active-firm-info">
+            <span class="sidebar__active-firm-label">Aktif Firma</span>
+            <span class="sidebar__active-firm-name">{{ firm.name }}</span>
+          </div>
+        </div>
+      } @else if (tenantService.activeTenant()) {
+        <div class="sidebar__active-firm">
+          <span class="material-icons sidebar__active-firm-icon">layers</span>
+          <div class="sidebar__active-firm-info">
+            <span class="sidebar__active-firm-label">Görünüm</span>
+            <span class="sidebar__active-firm-name">Tüm Firmalar</span>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+</nav>

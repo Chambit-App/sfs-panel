@@ -1,0 +1,604 @@
+<div class="cari-page">
+
+  <!-- PAGE HEADER -->
+  <app-page-header
+    title="Cari Hesaplar"
+    [subtitle]="activeFirm()?.name ?? 'Firma seçilmedi'">
+  </app-page-header>
+
+  <!-- NO FIRM SELECTED -->
+  @if (!activeFirm()) {
+    <div class="empty-state card">
+      <span class="material-icons empty-state__icon">business</span>
+      <p>Devam etmek için lütfen bir firma seçin.</p>
+    </div>
+  } @else {
+
+    <!-- ============================================================ -->
+    <!--  LIST VIEW                                                     -->
+    <!-- ============================================================ -->
+    @if (view() === 'list') {
+
+      <!-- TABS -->
+      <div class="tabs">
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'list'" (click)="setTab('list')">
+          <span class="material-icons">people</span>
+          Cari Listesi
+        </button>
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'report'" (click)="setTab('report')">
+          <span class="material-icons">assessment</span>
+          Cari Raporu
+        </button>
+      </div>
+
+      <!-- ======================== TAB 1: LIST ======================== -->
+      @if (activeTab() === 'list') {
+
+        <!-- KPI SUMMARY ROW -->
+        <div class="kpi-row">
+          <div class="kpi-mini card">
+            <span class="kpi-mini__label">Toplam Gelir</span>
+            <span class="kpi-mini__value text-positive">{{ totalGelir() | currencyTry }}</span>
+          </div>
+          <div class="kpi-mini card">
+            <span class="kpi-mini__label">Toplam Gider</span>
+            <span class="kpi-mini__value text-negative">{{ totalGider() | currencyTry }}</span>
+          </div>
+          <div class="kpi-mini card">
+            <span class="kpi-mini__label">Net Bakiye</span>
+            <span class="kpi-mini__value" [ngClass]="getNetClass(totalNet())">{{ totalNet() | currencyTry }}</span>
+          </div>
+          <div class="kpi-mini card">
+            <span class="kpi-mini__label">Vadesi Geçen</span>
+            <span class="kpi-mini__value text-negative">{{ totalOverdue() | currencyTry }}</span>
+          </div>
+        </div>
+
+        <!-- TOOLBAR -->
+        <div class="toolbar card">
+          <div class="toolbar__left">
+            <!-- Type filter -->
+            <div class="filter-group">
+              <button class="filter-btn" [class.filter-btn--active]="filterType() === 'ALL'" (click)="filterType.set('ALL')">Tümü</button>
+              <button class="filter-btn filter-btn--musteri" [class.filter-btn--active]="filterType() === 'MUSTERI'" (click)="filterType.set('MUSTERI')">Müşteriler</button>
+              <button class="filter-btn filter-btn--tedarikci" [class.filter-btn--active]="filterType() === 'TEDARIKCI'" (click)="filterType.set('TEDARIKCI')">Tedarikçiler</button>
+            </div>
+            <!-- Search -->
+            <div class="search-box">
+              <span class="material-icons search-box__icon">search</span>
+              <input
+                type="text"
+                class="form-control search-box__input"
+                placeholder="Ad veya vergi no ile ara..."
+                [value]="searchQuery()"
+                (input)="onSearchChange($event)" />
+            </div>
+          </div>
+          <div class="toolbar__right">
+            <button class="btn btn--primary" (click)="openCreate()">
+              <span class="material-icons">add</span>
+              Yeni Cari
+            </button>
+          </div>
+        </div>
+
+        <!-- ACCOUNTS TABLE -->
+        <div class="card table-card">
+          @if (loading()) {
+            <div class="loading-state">
+              <span class="material-icons loading-state__spinner">sync</span>
+              <span>Yükleniyor...</span>
+            </div>
+          } @else if (filteredAccounts().length === 0) {
+            <div class="empty-state">
+              <span class="material-icons empty-state__icon">people_outline</span>
+              <p>Cari hesap bulunamadı.</p>
+              <button class="btn btn--primary" (click)="openCreate()">
+                <span class="material-icons">add</span>Yeni Cari Ekle
+              </button>
+            </div>
+          } @else {
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Tip</th>
+                    <th>Ad</th>
+                    <th>Vergi No</th>
+                    <th>Telefon</th>
+                    <th class="text-right">Vade (Gün)</th>
+                    <th class="text-right">Toplam Gelir</th>
+                    <th class="text-right">Toplam Gider</th>
+                    <th class="text-right">Net Bakiye</th>
+                    <th class="text-right">Vadesi Geçen</th>
+                    <th class="text-center">İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (account of filteredAccounts(); track account.id) {
+                    <tr class="data-table__row" (click)="openDetail(account)">
+                      <td>
+                        <span class="badge" [ngClass]="getTypeClass(account.type)">
+                          {{ getTypeLabel(account.type) }}
+                        </span>
+                      </td>
+                      <td class="cell-name">{{ account.name }}</td>
+                      <td class="text-secondary">{{ account.tax_no || '-' }}</td>
+                      <td class="text-secondary">{{ account.phone || '-' }}</td>
+                      <td class="text-right">{{ account.payment_term_days }}</td>
+                      <td class="text-right text-positive">{{ account.total_gelir | currencyTry }}</td>
+                      <td class="text-right text-negative">{{ account.total_gider | currencyTry }}</td>
+                      <td class="text-right font-semibold" [ngClass]="getNetClass(account.net_balance)">
+                        {{ account.net_balance | currencyTry }}
+                      </td>
+                      <td class="text-right">
+                        @if (account.overdue_count > 0) {
+                          <span class="overdue-badge">
+                            <span class="overdue-badge__count">{{ account.overdue_count }}</span>
+                            {{ account.overdue_amount | currencyTry }}
+                          </span>
+                        } @else {
+                          <span class="text-muted">-</span>
+                        }
+                      </td>
+                      <td class="text-center actions-cell" (click)="$event.stopPropagation()">
+                        <button class="btn btn--ghost btn--sm btn--icon" title="Hesap Ekstresi" (click)="openStatement(account, $event)">
+                          <span class="material-icons">receipt_long</span>
+                        </button>
+                        <button class="btn btn--ghost btn--sm btn--icon" title="Düzenle" (click)="openEdit(account, $event)">
+                          <span class="material-icons">edit</span>
+                        </button>
+                        <button class="btn btn--ghost btn--sm btn--icon btn--danger-icon" title="Sil" (click)="confirmDelete(account.id, $event)">
+                          <span class="material-icons">delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="table-footer">
+              <span class="text-muted text-sm">{{ filteredAccounts().length }} kayıt</span>
+            </div>
+          }
+        </div>
+
+      } <!-- end TAB 1 -->
+
+      <!-- ======================== TAB 2: REPORT ======================== -->
+      @if (activeTab() === 'report') {
+
+        <!-- Report Filter Bar -->
+        <div class="toolbar card">
+          <div class="toolbar__left">
+            <div class="form-group form-group--inline">
+              <label class="form-label">Tip</label>
+              <select class="form-control" [value]="reportFilterType()" (change)="onReportFilterTypeChange($any($event.target).value)">
+                <option value="ALL">Tümü</option>
+                <option value="MUSTERI">Müşteriler</option>
+                <option value="TEDARIKCI">Tedarikçiler</option>
+              </select>
+            </div>
+            <div class="form-group form-group--inline">
+              <label class="form-label">Başlangıç</label>
+              <input type="date" class="form-control" [value]="reportDateFrom()" (change)="onReportDateFromChange($event)" />
+            </div>
+            <div class="form-group form-group--inline">
+              <label class="form-label">Bitiş</label>
+              <input type="date" class="form-control" [value]="reportDateTo()" (change)="onReportDateToChange($event)" />
+            </div>
+          </div>
+          <div class="toolbar__right">
+            <button class="btn btn--primary" (click)="applyReportFilter()">
+              <span class="material-icons">filter_list</span>
+              Filtrele
+            </button>
+          </div>
+        </div>
+
+        @if (reportLoading()) {
+          <div class="loading-state card">
+            <span class="material-icons loading-state__spinner">sync</span>
+            <span>Rapor yükleniyor...</span>
+          </div>
+        } @else if (reportRows().length === 0) {
+          <div class="empty-state card">
+            <span class="material-icons empty-state__icon">bar_chart</span>
+            <p>Seçili kriterlere uygun rapor verisi bulunamadı.</p>
+          </div>
+        } @else {
+          <!-- Grand Total -->
+          <div class="kpi-row">
+            <div class="kpi-mini card">
+              <span class="kpi-mini__label">Genel Gelir</span>
+              <span class="kpi-mini__value text-positive">{{ reportTotalGelir() | currencyTry }}</span>
+            </div>
+            <div class="kpi-mini card">
+              <span class="kpi-mini__label">Genel Gider</span>
+              <span class="kpi-mini__value text-negative">{{ reportTotalGider() | currencyTry }}</span>
+            </div>
+            <div class="kpi-mini card">
+              <span class="kpi-mini__label">Genel Net</span>
+              <span class="kpi-mini__value" [ngClass]="getNetClass(reportTotalNet())">{{ reportTotalNet() | currencyTry }}</span>
+            </div>
+          </div>
+
+          <!-- Grouped Report Table -->
+          <div class="card report-card">
+            <div class="table-responsive">
+              <table class="data-table report-table">
+                <thead>
+                  <tr>
+                    <th>Cari Adı</th>
+                    <th>Tip</th>
+                    <th class="text-right">Gelir</th>
+                    <th class="text-right">Gider</th>
+                    <th class="text-right">Net</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (group of reportGroups(); track group.year) {
+                    <!-- Year header row -->
+                    <tr class="group-row group-row--year">
+                      <td colspan="5">
+                        <span class="material-icons">calendar_today</span>
+                        {{ group.year }} Yılı
+                      </td>
+                    </tr>
+
+                    @for (monthGroup of group.months; track monthGroup.month) {
+                      <!-- Month header row -->
+                      <tr class="group-row group-row--month">
+                        <td colspan="2">{{ monthGroup.monthLabel }} {{ group.year }}</td>
+                        <td class="text-right text-positive">{{ monthGroup.subtotalGelir | currencyTry }}</td>
+                        <td class="text-right text-negative">{{ monthGroup.subtotalGider | currencyTry }}</td>
+                        <td class="text-right font-semibold" [ngClass]="getNetClass(monthGroup.subtotalNet)">{{ monthGroup.subtotalNet | currencyTry }}</td>
+                      </tr>
+
+                      <!-- Cari rows -->
+                      @for (row of monthGroup.rows; track row.cari_id) {
+                        <tr class="data-table__row">
+                          <td class="cell-indent">{{ row.cari_name }}</td>
+                          <td>
+                            <span class="badge badge--sm" [ngClass]="getTypeClass(row.cari_type)">
+                              {{ getTypeLabel(row.cari_type) }}
+                            </span>
+                          </td>
+                          <td class="text-right text-positive">{{ row.gelir_total | currencyTry }}</td>
+                          <td class="text-right text-negative">{{ row.gider_total | currencyTry }}</td>
+                          <td class="text-right" [ngClass]="getNetClass(row.net)">{{ row.net | currencyTry }}</td>
+                        </tr>
+                      }
+                    }
+
+                    <!-- Year total row -->
+                    <tr class="group-row group-row--total">
+                      <td colspan="2">{{ group.year }} Yılı Toplamı</td>
+                      <td class="text-right text-positive">{{ group.yearGelir | currencyTry }}</td>
+                      <td class="text-right text-negative">{{ group.yearGider | currencyTry }}</td>
+                      <td class="text-right font-semibold" [ngClass]="getNetClass(group.yearNet)">{{ group.yearNet | currencyTry }}</td>
+                    </tr>
+                  }
+
+                  <!-- Grand total row -->
+                  <tr class="group-row group-row--grand-total">
+                    <td colspan="2">Genel Toplam</td>
+                    <td class="text-right text-positive">{{ reportTotalGelir() | currencyTry }}</td>
+                    <td class="text-right text-negative">{{ reportTotalGider() | currencyTry }}</td>
+                    <td class="text-right font-semibold" [ngClass]="getNetClass(reportTotalNet())">{{ reportTotalNet() | currencyTry }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+
+      } <!-- end TAB 2 -->
+
+    } <!-- end view === 'list' -->
+
+    <!-- ============================================================ -->
+    <!--  FORM VIEW                                                     -->
+    <!-- ============================================================ -->
+    @if (view() === 'form') {
+      <div class="form-view">
+        <div class="form-view__header">
+          <button class="btn btn--ghost" (click)="view.set('list')">
+            <span class="material-icons">arrow_back</span>
+            Listeye Dön
+          </button>
+          <h2 class="form-view__title">
+            {{ isEditing ? 'Cari Hesap Düzenle' : 'Yeni Cari Hesap' }}
+          </h2>
+        </div>
+
+        <div class="card form-card">
+          <form [formGroup]="cariForm" (ngSubmit)="onFormSubmit()">
+
+            <!-- Type radio -->
+            <div class="form-group">
+              <label class="form-label">Hesap Tipi <span class="required">*</span></label>
+              <div class="radio-group">
+                <label class="radio-option" [class.radio-option--selected]="cariForm.get('type')?.value === 'MUSTERI'">
+                  <input type="radio" formControlName="type" value="MUSTERI" />
+                  <span class="badge badge--musteri">Müşteri</span>
+                </label>
+                <label class="radio-option" [class.radio-option--selected]="cariForm.get('type')?.value === 'TEDARIKCI'">
+                  <input type="radio" formControlName="type" value="TEDARIKCI" />
+                  <span class="badge badge--tedarikci">Tedarikçi</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Two-column grid -->
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="cari-name">Ad / Unvan <span class="required">*</span></label>
+                <input
+                  id="cari-name"
+                  type="text"
+                  class="form-control"
+                  [class.form-control--error]="hasFieldError('name')"
+                  formControlName="name"
+                  placeholder="Firma veya kişi adı" />
+                @if (hasFieldError('name')) {
+                  <span class="form-error">Ad alanı zorunludur (en az 2 karakter).</span>
+                }
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="cari-tax">Vergi No</label>
+                <input
+                  id="cari-tax"
+                  type="text"
+                  class="form-control"
+                  formControlName="tax_no"
+                  placeholder="Vergi numarası" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="cari-phone">Telefon</label>
+                <input
+                  id="cari-phone"
+                  type="text"
+                  class="form-control"
+                  formControlName="phone"
+                  placeholder="+90 5XX XXX XX XX" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="cari-email">E-posta</label>
+                <input
+                  id="cari-email"
+                  type="email"
+                  class="form-control"
+                  [class.form-control--error]="hasFieldError('email')"
+                  formControlName="email"
+                  placeholder="ornek@firma.com" />
+                @if (hasFieldError('email')) {
+                  <span class="form-error">Geçerli bir e-posta adresi girin.</span>
+                }
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="cari-vade">Varsayılan Vade (Gün) <span class="required">*</span></label>
+                <input
+                  id="cari-vade"
+                  type="number"
+                  class="form-control"
+                  [class.form-control--error]="hasFieldError('payment_term_days')"
+                  formControlName="payment_term_days"
+                  min="0"
+                  placeholder="30" />
+                @if (hasFieldError('payment_term_days')) {
+                  <span class="form-error">Geçerli bir vade gün sayısı girin.</span>
+                }
+              </div>
+
+              <div class="form-group form-group--checkbox">
+                <label class="checkbox-label">
+                  <input type="checkbox" formControlName="is_active" />
+                  <span>Aktif Hesap</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Address full width -->
+            <div class="form-group">
+              <label class="form-label" for="cari-address">Adres</label>
+              <textarea
+                id="cari-address"
+                class="form-control"
+                formControlName="address"
+                rows="3"
+                placeholder="Açık adres..."></textarea>
+            </div>
+
+            <!-- Actions -->
+            <div class="form-actions">
+              <button type="button" class="btn btn--secondary" (click)="view.set('list')" [disabled]="saving()">
+                İptal
+              </button>
+              <button type="submit" class="btn btn--primary" [disabled]="saving()">
+                @if (saving()) {
+                  <span class="material-icons spinning">sync</span>
+                  Kaydediliyor...
+                } @else {
+                  <span class="material-icons">save</span>
+                  {{ isEditing ? 'Güncelle' : 'Kaydet' }}
+                }
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+    } <!-- end view === 'form' -->
+
+    <!-- ============================================================ -->
+    <!--  DETAIL VIEW (Hesap Ekstresi)                                  -->
+    <!-- ============================================================ -->
+    @if (view() === 'detail') {
+      @let account = selectedAccount();
+      @if (account) {
+        <div class="detail-view">
+
+          <!-- Back + Header -->
+          <div class="detail-view__header">
+            <button class="btn btn--ghost" (click)="backToList()">
+              <span class="material-icons">arrow_back</span>
+              Listeye Dön
+            </button>
+            <div class="detail-view__title-block">
+              <h2 class="detail-view__name">{{ account.name }}</h2>
+              <span class="badge" [ngClass]="getTypeClass(account.type)">{{ getTypeLabel(account.type) }}</span>
+            </div>
+            <div class="detail-view__actions">
+              <button class="btn btn--secondary btn--sm" (click)="openEdit(account, $event)">
+                <span class="material-icons">edit</span>
+                Düzenle
+              </button>
+            </div>
+          </div>
+
+          <!-- Contact Info + KPIs -->
+          <div class="detail-top">
+            <div class="card detail-contact">
+              <h3 class="detail-section-title">İletişim Bilgileri</h3>
+              <div class="detail-contact__grid">
+                @if (account.tax_no) {
+                  <div class="detail-info-item">
+                    <span class="material-icons">badge</span>
+                    <div>
+                      <span class="detail-info-item__label">Vergi No</span>
+                      <span class="detail-info-item__value">{{ account.tax_no }}</span>
+                    </div>
+                  </div>
+                }
+                @if (account.phone) {
+                  <div class="detail-info-item">
+                    <span class="material-icons">phone</span>
+                    <div>
+                      <span class="detail-info-item__label">Telefon</span>
+                      <span class="detail-info-item__value">{{ account.phone }}</span>
+                    </div>
+                  </div>
+                }
+                <div class="detail-info-item">
+                  <span class="material-icons">schedule</span>
+                  <div>
+                    <span class="detail-info-item__label">Vade</span>
+                    <span class="detail-info-item__value">{{ account.payment_term_days }} gün</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="detail-kpis">
+              <div class="kpi-mini card kpi-mini--large">
+                <span class="kpi-mini__label">Toplam Gelir</span>
+                <span class="kpi-mini__value text-positive">{{ account.total_gelir | currencyTry }}</span>
+              </div>
+              <div class="kpi-mini card kpi-mini--large">
+                <span class="kpi-mini__label">Toplam Gider</span>
+                <span class="kpi-mini__value text-negative">{{ account.total_gider | currencyTry }}</span>
+              </div>
+              <div class="kpi-mini card kpi-mini--large">
+                <span class="kpi-mini__label">Net Bakiye</span>
+                <span class="kpi-mini__value" [ngClass]="getNetClass(account.net_balance)">{{ account.net_balance | currencyTry }}</span>
+              </div>
+              @if (account.overdue_count > 0) {
+                <div class="kpi-mini card kpi-mini--large kpi-mini--alert">
+                  <span class="kpi-mini__label">Vadesi Geçen</span>
+                  <span class="kpi-mini__value text-negative">{{ account.overdue_amount | currencyTry }}</span>
+                  <span class="kpi-mini__sub text-negative">{{ account.overdue_count }} işlem</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Transactions Table -->
+          <div class="card table-card">
+            <div class="table-card__header">
+              <h3 class="detail-section-title">Hesap Ekstresi</h3>
+            </div>
+
+            @if (loadingTransactions()) {
+              <div class="loading-state">
+                <span class="material-icons loading-state__spinner">sync</span>
+                <span>İşlemler yükleniyor...</span>
+              </div>
+            } @else if (transactions().length === 0) {
+              <div class="empty-state">
+                <span class="material-icons empty-state__icon">receipt_long</span>
+                <p>Bu cari hesaba ait işlem bulunamadı.</p>
+              </div>
+            } @else {
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Tarih</th>
+                      <th>Fatura No</th>
+                      <th>Tip</th>
+                      <th>Vade Tarihi</th>
+                      <th>Durum</th>
+                      <th class="text-right">Tutar</th>
+                      <th>Açıklama</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (txn of transactions(); track txn.id) {
+                      <tr class="data-table__row">
+                        <td>{{ txn.invoice_date | turkishDate }}</td>
+                        <td class="text-secondary">{{ txn.invoice_no || '-' }}</td>
+                        <td>
+                          <span class="txn-type" [ngClass]="getTxnTypeClass(txn.type)">
+                            <span class="material-icons txn-type__icon">
+                              {{ txn.type === 'GELIR' ? 'arrow_downward' : 'arrow_upward' }}
+                            </span>
+                            {{ getTxnTypeLabel(txn.type) }}
+                          </span>
+                        </td>
+                        <td>{{ txn.due_date | turkishDate }}</td>
+                        <td>
+                          <span class="badge" [ngClass]="getStatusClass(txn.status)">
+                            {{ getStatusLabel(txn.status) }}
+                          </span>
+                        </td>
+                        <td class="text-right font-semibold" [ngClass]="getTxnTypeClass(txn.type)">
+                          {{ txn.amount | currencyTry }}
+                        </td>
+                        <td class="text-secondary text-sm">{{ txn.description || '-' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <div class="table-footer">
+                <span class="text-muted text-sm">{{ transactions().length }} işlem</span>
+              </div>
+            }
+          </div>
+
+        </div>
+      }
+    } <!-- end view === 'detail' -->
+
+  } <!-- end activeFirm() -->
+
+</div>
+
+<!-- ================================================================ -->
+<!--  DELETE CONFIRM DIALOG                                             -->
+<!-- ================================================================ -->
+@if (showDeleteConfirm()) {
+  <app-confirm-dialog
+    title="Cari Hesabı Sil"
+    message="Bu cari hesabı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+    confirmText="Sil"
+    cancelText="İptal"
+    (confirmed)="onDeleteConfirmed()"
+    (cancelled)="onDeleteCancelled()">
+  </app-confirm-dialog>
+}

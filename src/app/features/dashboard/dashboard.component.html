@@ -1,0 +1,203 @@
+<app-page-header title="Dashboard" [subtitle]="firmName()" />
+
+<!-- Loading Overlay -->
+@if (loading()) {
+  <div class="dashboard__loading">
+    <span class="dashboard__loading-spinner"></span>
+    <p>Veriler yükleniyor...</p>
+  </div>
+}
+
+<!-- No Firm Selected -->
+@if (!activeFirm() && !loading()) {
+  <div class="dashboard__empty">
+    <span class="dashboard__empty-icon material-icons">business</span>
+    <h3>Firma Seçilmedi</h3>
+    <p>Dashboard verilerini görmek için lütfen üstten bir firma seçin.</p>
+  </div>
+}
+
+@if (activeFirm() && !loading()) {
+  <!-- KPI Cards -->
+  <div class="dashboard__kpis">
+    <app-kpi-card
+      title="Toplam Gelir"
+      [value]="kpi().totalGelir"
+      icon="trending_up"
+      trend="up"
+      format="currency"
+    />
+    <app-kpi-card
+      title="Toplam Gider"
+      [value]="kpi().totalGider"
+      icon="trending_down"
+      trend="down"
+      format="currency"
+    />
+    <app-kpi-card
+      title="Net Kar/Zarar"
+      [value]="kpi().netKarZarar"
+      icon="account_balance_wallet"
+      [trend]="netTrend()"
+      format="currency"
+    />
+    <app-kpi-card
+      title="Banka Bakiyesi"
+      [value]="kpi().totalBankBalance"
+      icon="account_balance"
+      trend="neutral"
+      format="currency"
+    />
+  </div>
+
+  <!-- Alert: Overdue Summary -->
+  @if (kpi().overdueCount > 0) {
+    <div class="dashboard__alert">
+      <span class="material-icons">warning</span>
+      <span>
+        <strong>{{ kpi().overdueCount }} vadesi geçmiş işlem</strong> —
+        Toplam {{ formatCurrency(kpi().overdueAmount) }} tutarında gecikmiş ödeme bulunuyor.
+      </span>
+    </div>
+  }
+
+  <!-- Charts Row -->
+  <div class="dashboard__charts">
+    <!-- Monthly Trend Bar Chart -->
+    <div class="dashboard__card">
+      <div class="dashboard__card-header">
+        <span class="material-icons">bar_chart</span>
+        <h3>Aylık Gelir / Gider ({{ currentYear }})</h3>
+      </div>
+      <div class="dashboard__chart-container">
+        @if (monthlyTrend().length > 0) {
+          <canvas baseChart
+            [data]="barChartData()"
+            [options]="barChartOptions"
+            type="bar">
+          </canvas>
+        } @else {
+          <div class="dashboard__chart-empty">
+            <span class="material-icons">bar_chart</span>
+            <p>Bu yıl için veri bulunamadı.</p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Bank Balances Doughnut Chart -->
+    <div class="dashboard__card">
+      <div class="dashboard__card-header">
+        <span class="material-icons">donut_large</span>
+        <h3>Banka Bakiyeleri</h3>
+      </div>
+      <div class="dashboard__chart-container">
+        @if (bankBalances().length > 0) {
+          <canvas baseChart
+            [data]="doughnutChartData()"
+            [options]="doughnutChartOptions"
+            type="doughnut">
+          </canvas>
+        } @else {
+          <div class="dashboard__chart-empty">
+            <span class="material-icons">account_balance</span>
+            <p>Banka hesabı bulunamadı.</p>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Tables Row -->
+  <div class="dashboard__tables">
+    <!-- Upcoming Payments (next 7 days) -->
+    <div class="dashboard__card">
+      <div class="dashboard__card-header">
+        <span class="material-icons">event_upcoming</span>
+        <h3>Yaklaşan Ödemeler <span class="dashboard__badge">7 gün</span></h3>
+      </div>
+      @if (upcomingPayments().length > 0) {
+        <div class="dashboard__table-wrapper">
+          <table class="dashboard__table">
+            <thead>
+              <tr>
+                <th>Tür</th>
+                <th>Tutar</th>
+                <th>Vade Tarihi</th>
+                <th>Açıklama</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (tx of upcomingPayments(); track tx.id) {
+                <tr>
+                  <td>
+                    <span class="dashboard__type-badge" [class.dashboard__type-badge--gelir]="tx.type === 'GELIR'"
+                          [class.dashboard__type-badge--gider]="tx.type === 'GIDER'">
+                      {{ tx.type === 'GELIR' ? 'Gelir' : 'Gider' }}
+                    </span>
+                  </td>
+                  <td class="dashboard__amount">{{ formatCurrency(tx.amount) }}</td>
+                  <td>{{ formatDate(tx.due_date) }}</td>
+                  <td class="dashboard__description">{{ tx.description || '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="dashboard__table-empty">
+          <span class="material-icons">check_circle</span>
+          <p>Önümüzdeki 7 günde vadesi gelen ödeme yok.</p>
+        </div>
+      }
+    </div>
+
+    <!-- Overdue Payments -->
+    <div class="dashboard__card dashboard__card--overdue">
+      <div class="dashboard__card-header">
+        <span class="material-icons">warning_amber</span>
+        <h3>Vadesi Geçmiş
+          @if (overduePayments().length > 0) {
+            <span class="dashboard__badge dashboard__badge--danger">{{ overduePayments().length }}</span>
+          }
+        </h3>
+      </div>
+      @if (overduePayments().length > 0) {
+        <div class="dashboard__table-wrapper">
+          <table class="dashboard__table">
+            <thead>
+              <tr>
+                <th>Tür</th>
+                <th>Tutar</th>
+                <th>Vade Tarihi</th>
+                <th>Gecikme</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (tx of overduePayments(); track tx.id) {
+                <tr class="dashboard__row--overdue">
+                  <td>
+                    <span class="dashboard__type-badge" [class.dashboard__type-badge--gelir]="tx.type === 'GELIR'"
+                          [class.dashboard__type-badge--gider]="tx.type === 'GIDER'">
+                      {{ tx.type === 'GELIR' ? 'Gelir' : 'Gider' }}
+                    </span>
+                  </td>
+                  <td class="dashboard__amount">{{ formatCurrency(tx.amount) }}</td>
+                  <td>{{ formatDate(tx.due_date) }}</td>
+                  <td>
+                    <span class="dashboard__overdue-days">{{ getDaysOverdue(tx.due_date) }} gün</span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="dashboard__table-empty">
+          <span class="material-icons">check_circle</span>
+          <p>Vadesi geçmiş ödeme bulunmuyor.</p>
+        </div>
+      }
+    </div>
+  </div>
+}

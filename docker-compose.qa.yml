@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  sfspanel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CONFIGURATION: qa
+    ports:
+      - "8080:80"
+    restart: unless-stopped

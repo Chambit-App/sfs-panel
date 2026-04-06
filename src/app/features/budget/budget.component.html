@@ -1,0 +1,449 @@
+<app-page-header title="Bütçe Planlama" [subtitle]="firmName()" />
+
+<!-- Loading -->
+@if (loading()) {
+  <div class="budget__loading">
+    <span class="budget__loading-spinner"></span>
+    <p>Veriler yükleniyor...</p>
+  </div>
+}
+
+<!-- No Firm -->
+@if (!activeFirm() && !loading()) {
+  <div class="budget__empty-state">
+    <span class="material-icons">account_balance_wallet</span>
+    <h3>Firma Seçilmedi</h3>
+    <p>Bütçe verilerini görmek için lütfen üstten bir firma seçin.</p>
+  </div>
+}
+
+@if (activeFirm() && !loading()) {
+  <!-- Toolbar -->
+  <div class="budget__toolbar">
+    <!-- Tabs -->
+    <div class="budget__tabs">
+      <button
+        class="budget__tab"
+        [class.budget__tab--active]="activeTab() === 'planning'"
+        (click)="setTab('planning')"
+      >
+        <span class="material-icons">grid_on</span>
+        Bütçe Planlama
+      </button>
+      <button
+        class="budget__tab"
+        [class.budget__tab--active]="activeTab() === 'summary'"
+        (click)="setTab('summary')"
+      >
+        <span class="material-icons">summarize</span>
+        Bütçe Özeti
+      </button>
+    </div>
+
+    <!-- Controls -->
+    <div class="budget__controls">
+      <!-- Year selector -->
+      <div class="budget__control-group">
+        <label class="budget__control-label">Yıl</label>
+        <select
+          class="form-control budget__year-select"
+          [ngModel]="selectedYear()"
+          (ngModelChange)="onYearChange($event)"
+        >
+          @for (y of yearOptions(); track y) {
+            <option [value]="y">{{ y }}</option>
+          }
+        </select>
+      </div>
+
+      @if (activeTab() === 'planning') {
+        <!-- Type filter -->
+        <div class="budget__control-group">
+          <label class="budget__control-label">Hesap Türü</label>
+          <div class="budget__filter-buttons">
+            <button
+              class="budget__filter-btn"
+              [class.budget__filter-btn--active]="typeFilter() === 'ALL'"
+              (click)="onTypeFilterChange('ALL')"
+            >Tümü</button>
+            <button
+              class="budget__filter-btn"
+              [class.budget__filter-btn--active]="typeFilter() === 'GELIR'"
+              (click)="onTypeFilterChange('GELIR')"
+            >Gelir</button>
+            <button
+              class="budget__filter-btn"
+              [class.budget__filter-btn--active]="typeFilter() === 'GIDER'"
+              (click)="onTypeFilterChange('GIDER')"
+            >Gider</button>
+          </div>
+        </div>
+
+        <!-- Save -->
+        <button
+          class="btn btn--primary budget__save-btn"
+          [disabled]="saving() || !hasDirtyChanges"
+          (click)="savePlans()"
+        >
+          @if (saving()) {
+            <span class="budget__btn-spinner"></span>
+            Kaydediliyor...
+          } @else {
+            <span class="material-icons">save</span>
+            Kaydet
+            @if (hasDirtyChanges) {
+              <span class="budget__dirty-badge">●</span>
+            }
+          }
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Save feedback -->
+  @if (saveSuccess()) {
+    <div class="budget__alert budget__alert--success">
+      <span class="material-icons">check_circle</span>
+      Bütçe planları başarıyla kaydedildi.
+    </div>
+  }
+  @if (saveError()) {
+    <div class="budget__alert budget__alert--error">
+      <span class="material-icons">error</span>
+      {{ saveError() }}
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════
+       TAB 1: BÜTÇE PLANLAMA
+  ════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'planning') {
+    @if (accounts().length === 0) {
+      <div class="budget__empty-state budget__empty-state--sm">
+        <span class="material-icons">table_chart</span>
+        <h3>Hesap Planı Bulunamadı</h3>
+        <p>Bu firma için henüz hesap planı tanımlanmamış.</p>
+      </div>
+    } @else {
+      <div class="budget__grid-wrapper">
+        <div class="budget__grid-scroll">
+          <table class="budget__grid">
+            <!-- ── Header ── -->
+            <thead>
+              <tr class="budget__grid-head-row">
+                <th class="budget__grid-th budget__col-code" rowspan="2">Hesap Kodu</th>
+                <th class="budget__grid-th budget__col-name" rowspan="2">Hesap Adı</th>
+                @for (m of months; track m) {
+                  <th class="budget__grid-th budget__col-month" colspan="2">{{ monthsShort[m - 1] }}</th>
+                }
+                <th class="budget__grid-th budget__col-total" colspan="2">Yıllık Toplam</th>
+              </tr>
+              <tr class="budget__grid-subhead-row">
+                @for (m of months; track m) {
+                  <th class="budget__grid-th budget__col-sub budget__col-sub--planned">Planlanan</th>
+                  <th class="budget__grid-th budget__col-sub budget__col-sub--actual">Gerçekleşen</th>
+                }
+                <th class="budget__grid-th budget__col-sub budget__col-sub--planned">Planlanan</th>
+                <th class="budget__grid-th budget__col-sub budget__col-sub--actual">Gerçekleşen</th>
+              </tr>
+            </thead>
+
+            <!-- ── Body ── -->
+            <tbody>
+              @for (group of accountGroups(); track trackByGroup($index, group)) {
+                <!-- Group header row -->
+                <tr class="budget__group-row" (click)="toggleGroup(group)">
+                  <td class="budget__group-td budget__col-code">
+                    <span class="material-icons budget__collapse-icon">
+                      {{ group.collapsed ? 'chevron_right' : 'expand_more' }}
+                    </span>
+                    {{ group.parentCode ?? '' }}
+                  </td>
+                  <td class="budget__group-td budget__col-name">
+                    <span class="budget__group-label" [class.budget__group-label--gelir]="group.type === 'GELIR'" [class.budget__group-label--gider]="group.type === 'GIDER'">
+                      {{ group.type === 'GELIR' ? 'GELİR' : 'GİDER' }}
+                    </span>
+                    {{ group.parentName }}
+                  </td>
+                  @for (m of months; track m) {
+                    <td class="budget__group-td budget__col-sub budget__col-sub--planned text-right">
+                      {{ formatCurrency(getGroupPlannedTotal(group, m)) }}
+                    </td>
+                    <td class="budget__group-td budget__col-sub budget__col-sub--actual text-right">
+                      {{ formatCurrency(getGroupActualTotal(group, m)) }}
+                    </td>
+                  }
+                  <td class="budget__group-td budget__col-sub budget__col-sub--planned text-right">
+                    {{ formatCurrency(getGroupAnnualPlanned(group)) }}
+                  </td>
+                  <td class="budget__group-td budget__col-sub budget__col-sub--actual text-right">
+                    {{ formatCurrency(getGroupAnnualActual(group)) }}
+                  </td>
+                </tr>
+
+                <!-- Account rows -->
+                @if (!group.collapsed) {
+                  @for (acc of group.accounts; track trackByAccount($index, acc)) {
+                    <tr class="budget__data-row">
+                      <td class="budget__data-td budget__col-code">{{ acc.code }}</td>
+                      <td class="budget__data-td budget__col-name">{{ acc.name }}</td>
+                      @for (m of months; track m) {
+                        <!-- Editable planned cell -->
+                        <td class="budget__data-td budget__col-sub budget__col-sub--planned budget__cell--editable">
+                          <input
+                            class="budget__cell-input"
+                            type="number"
+                            min="0"
+                            step="100"
+                            [value]="getPlanned(acc.id, m)"
+                            (input)="onCellInput(acc.id, m, $any($event.target).value)"
+                            placeholder="0"
+                          />
+                        </td>
+                        <!-- Read-only actual cell -->
+                        <td class="budget__data-td budget__col-sub budget__col-sub--actual text-right">
+                          <span class="budget__actual-value">{{ formatCurrency(getActual(acc.id, m)) }}</span>
+                        </td>
+                      }
+                      <!-- Annual totals -->
+                      <td class="budget__data-td budget__col-sub budget__col-sub--planned text-right font-semibold">
+                        {{ formatCurrency(getAnnualPlanned(acc.id)) }}
+                      </td>
+                      <td class="budget__data-td budget__col-sub budget__col-sub--actual text-right">
+                        <span class="budget__actual-value font-semibold">{{ formatCurrency(getAnnualActual(acc.id)) }}</span>
+                      </td>
+                    </tr>
+                  }
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="budget__legend">
+        <span class="budget__legend-item">
+          <span class="budget__legend-dot budget__legend-dot--planned"></span>
+          Planlanan (düzenlenebilir)
+        </span>
+        <span class="budget__legend-item">
+          <span class="budget__legend-dot budget__legend-dot--actual"></span>
+          Gerçekleşen (otomatik)
+        </span>
+      </div>
+    }
+  }
+
+  <!-- ════════════════════════════════════════════════════
+       TAB 2: BÜTÇE ÖZETİ
+  ════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'summary') {
+    <!-- Annual KPI cards -->
+    <div class="budget__kpis">
+      <app-kpi-card
+        title="Yıllık Plan. Gelir"
+        [value]="annualKpis().totalPlannedGelir"
+        icon="trending_up"
+        trend="neutral"
+        format="currency"
+      />
+      <app-kpi-card
+        title="Yıllık Gerç. Gelir"
+        [value]="annualKpis().totalActualGelir"
+        icon="trending_up"
+        [trend]="annualKpis().totalActualGelir >= annualKpis().totalPlannedGelir ? 'up' : 'down'"
+        format="currency"
+      />
+      <app-kpi-card
+        title="Yıllık Plan. Gider"
+        [value]="annualKpis().totalPlannedGider"
+        icon="trending_down"
+        trend="neutral"
+        format="currency"
+      />
+      <app-kpi-card
+        title="Yıllık Gerç. Gider"
+        [value]="annualKpis().totalActualGider"
+        icon="trending_down"
+        [trend]="annualKpis().totalActualGider <= annualKpis().totalPlannedGider ? 'up' : 'down'"
+        format="currency"
+      />
+      <app-kpi-card
+        title="Plan. Net Durum"
+        [value]="annualKpis().netPlanned"
+        icon="account_balance_wallet"
+        [trend]="annualKpis().netPlanned >= 0 ? 'up' : 'down'"
+        format="currency"
+      />
+      <app-kpi-card
+        title="Gerç. Net Durum"
+        [value]="annualKpis().netActual"
+        icon="account_balance_wallet"
+        [trend]="annualKpis().netActual >= 0 ? 'up' : 'down'"
+        format="currency"
+      />
+      <app-kpi-card
+        title="Yıllık Sapma"
+        [value]="annualKpis().variance"
+        icon="compare_arrows"
+        [trend]="annualKpis().variance >= 0 ? 'up' : 'down'"
+        format="currency"
+      />
+      <app-kpi-card
+        title="Sapma Oranı %"
+        [value]="annualKpis().variancePct"
+        icon="percent"
+        [trend]="annualKpis().variancePct >= 0 ? 'up' : 'down'"
+        format="percent"
+      />
+    </div>
+
+    <!-- Summary table -->
+    <div class="budget__summary-wrapper">
+      <div class="budget__summary-scroll">
+        <table class="budget__summary-table">
+          <thead>
+            <tr>
+              <th class="budget__summary-th budget__summary-col-label">Kalem</th>
+              @for (m of months; track m) {
+                <th class="budget__summary-th">{{ monthsShort[m - 1] }}</th>
+              }
+              <th class="budget__summary-th">Toplam</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Toplam Gelir - Planlanan -->
+            <tr class="budget__summary-section-row">
+              <td class="budget__summary-td budget__summary-label">
+                <span class="budget__summary-type-badge budget__summary-type-badge--gelir">GELİR</span>
+                Planlanan
+              </td>
+              @for (m of months; track m) {
+                <td class="budget__summary-td text-right">
+                  {{ formatCurrency(getSummaryRow(m)?.totalPlannedGelir ?? 0) }}
+                </td>
+              }
+              <td class="budget__summary-td text-right font-semibold">
+                {{ formatCurrency(annualKpis().totalPlannedGelir) }}
+              </td>
+            </tr>
+
+            <!-- Toplam Gelir - Gerçekleşen -->
+            <tr class="budget__summary-actual-row">
+              <td class="budget__summary-td budget__summary-label budget__summary-label--sub">
+                Gerçekleşen
+              </td>
+              @for (m of months; track m) {
+                <td class="budget__summary-td text-right">
+                  <span class="budget__actual-value">{{ formatCurrency(getSummaryRow(m)?.totalActualGelir ?? 0) }}</span>
+                </td>
+              }
+              <td class="budget__summary-td text-right">
+                <span class="budget__actual-value font-semibold">{{ formatCurrency(annualKpis().totalActualGelir) }}</span>
+              </td>
+            </tr>
+
+            <!-- Divider -->
+            <tr class="budget__summary-divider"><td colspan="14"></td></tr>
+
+            <!-- Toplam Gider - Planlanan -->
+            <tr class="budget__summary-section-row">
+              <td class="budget__summary-td budget__summary-label">
+                <span class="budget__summary-type-badge budget__summary-type-badge--gider">GİDER</span>
+                Planlanan
+              </td>
+              @for (m of months; track m) {
+                <td class="budget__summary-td text-right">
+                  {{ formatCurrency(getSummaryRow(m)?.totalPlannedGider ?? 0) }}
+                </td>
+              }
+              <td class="budget__summary-td text-right font-semibold">
+                {{ formatCurrency(annualKpis().totalPlannedGider) }}
+              </td>
+            </tr>
+
+            <!-- Toplam Gider - Gerçekleşen -->
+            <tr class="budget__summary-actual-row">
+              <td class="budget__summary-td budget__summary-label budget__summary-label--sub">
+                Gerçekleşen
+              </td>
+              @for (m of months; track m) {
+                <td class="budget__summary-td text-right">
+                  <span class="budget__actual-value">{{ formatCurrency(getSummaryRow(m)?.totalActualGider ?? 0) }}</span>
+                </td>
+              }
+              <td class="budget__summary-td text-right">
+                <span class="budget__actual-value font-semibold">{{ formatCurrency(annualKpis().totalActualGider) }}</span>
+              </td>
+            </tr>
+
+            <!-- Divider -->
+            <tr class="budget__summary-divider"><td colspan="14"></td></tr>
+
+            <!-- Net Durum - Planlanan -->
+            <tr class="budget__summary-net-row">
+              <td class="budget__summary-td budget__summary-label">
+                <strong>NET DURUM</strong> — Planlanan
+              </td>
+              @for (m of months; track m) {
+                <td class="budget__summary-td text-right">
+                  <span [class]="summaryNetClass(getSummaryRow(m)?.netPlanned ?? 0)">
+                    {{ formatCurrency(getSummaryRow(m)?.netPlanned ?? 0) }}
+                  </span>
+                </td>
+              }
+              <td class="budget__summary-td text-right font-semibold">
+                <span [class]="summaryNetClass(annualKpis().netPlanned)">
+                  {{ formatCurrency(annualKpis().netPlanned) }}
+                </span>
+              </td>
+            </tr>
+
+            <!-- Net Durum - Gerçekleşen -->
+            <tr class="budget__summary-net-row budget__summary-actual-row">
+              <td class="budget__summary-td budget__summary-label budget__summary-label--sub">
+                <strong>NET DURUM</strong> — Gerçekleşen
+              </td>
+              @for (m of months; track m) {
+                <td class="budget__summary-td text-right">
+                  <span class="budget__actual-value" [class]="summaryNetClass(getSummaryRow(m)?.netActual ?? 0)">
+                    {{ formatCurrency(getSummaryRow(m)?.netActual ?? 0) }}
+                  </span>
+                </td>
+              }
+              <td class="budget__summary-td text-right font-semibold">
+                <span class="budget__actual-value" [class]="summaryNetClass(annualKpis().netActual)">
+                  {{ formatCurrency(annualKpis().netActual) }}
+                </span>
+              </td>
+            </tr>
+
+            <!-- Variance row -->
+            <tr class="budget__summary-variance-row">
+              <td class="budget__summary-td budget__summary-label">
+                <span class="material-icons" style="font-size:14px">compare_arrows</span>
+                Sapma (Gerç. - Plan.)
+              </td>
+              @for (m of months; track m) {
+                <td class="budget__summary-td text-right">
+                  @let net = getSummaryRow(m);
+                  @let v = (net?.netActual ?? 0) - (net?.netPlanned ?? 0);
+                  <span [class]="varianceClass(v)">
+                    {{ v !== 0 ? (v > 0 ? '+' : '') + formatCurrency(v) : '—' }}
+                  </span>
+                </td>
+              }
+              <td class="budget__summary-td text-right font-semibold">
+                @let totalV = annualKpis().variance;
+                <span [class]="varianceClass(totalV)">
+                  {{ totalV !== 0 ? (totalV > 0 ? '+' : '') + formatCurrency(totalV) : '—' }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+}

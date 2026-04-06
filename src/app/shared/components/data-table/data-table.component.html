@@ -1,0 +1,72 @@
+<div class="data-table-wrapper">
+  @if (loading) {
+    <div class="data-table__loading">
+      <div class="data-table__spinner"></div>
+      <span class="data-table__loading-text">Yükleniyor...</span>
+    </div>
+  } @else {
+    <div class="data-table__scroll">
+      <table class="data-table">
+        <thead class="data-table__head">
+          <tr>
+            @for (col of columns; track col.field) {
+              <th
+                class="data-table__th"
+                (click)="sortBy(col.field)"
+                [class.data-table__th--sorted]="sortField() === col.field"
+              >
+                <div class="data-table__th-inner">
+                  <span>{{ col.header }}</span>
+                  <span class="material-icons data-table__sort-icon">
+                    {{ getSortIcon(col.field) }}
+                  </span>
+                </div>
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody class="data-table__body">
+          @if (sortedData().length === 0) {
+            <tr>
+              <td [attr.colspan]="columns.length" class="data-table__empty">
+                <div class="data-table__empty-content">
+                  <span class="material-icons data-table__empty-icon">inbox</span>
+                  <span>Gösterilecek veri bulunamadı</span>
+                </div>
+              </td>
+            </tr>
+          } @else {
+            @for (row of sortedData(); track $index) {
+              <tr class="data-table__row">
+                @for (col of columns; track col.field) {
+                  <td class="data-table__td">
+                    @switch (col.type) {
+                      @case ('currency') {
+                        <span class="data-table__currency">
+                          {{ $any(getCellValue(row, col)) | currencyTry }}
+                        </span>
+                      }
+                      @case ('date') {
+                        <span class="data-table__date">
+                          {{ $any(getCellValue(row, col)) | turkishDate }}
+                        </span>
+                      }
+                      @case ('status') {
+                        <span class="badge" [class]="'badge ' + getStatusClass($any(getCellValue(row, col)))">
+                          {{ getStatusLabel($any(getCellValue(row, col))) }}
+                        </span>
+                      }
+                      @default {
+                        {{ getCellValue(row, col) ?? '-' }}
+                      }
+                    }
+                  </td>
+                }
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

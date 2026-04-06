@@ -1,0 +1,21 @@
+<div class="kpi-card">
+  <div class="kpi-card__header">
+    <span class="kpi-card__title">{{ title }}</span>
+    <div class="kpi-card__icon-wrapper">
+      <span class="material-icons kpi-card__icon">{{ icon }}</span>
+    </div>
+  </div>
+
+  <div class="kpi-card__body">
+    <div class="kpi-card__value-row">
+      @if (format === 'currency') {
+        <span class="kpi-card__prefix">₺</span>
+      }
+      <span class="kpi-card__value">{{ formattedValue }}</span>
+    </div>
+
+    <div class="kpi-card__trend" [class]="trendClass">
+      <span class="material-icons kpi-card__trend-icon">{{ trendIcon }}</span>
+    </div>
+  </div>
+</div>
