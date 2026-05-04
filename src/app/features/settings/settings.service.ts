@@ -193,6 +193,15 @@ export class SettingsService {
     return (data ?? []) as AppUser[];
   }
 
+  async getAllUsers(): Promise<AppUser[]> {
+    const { data, error } = await this.client
+      .from('user_profiles')
+      .select('*')
+      .order('full_name');
+    if (error) throw error;
+    return (data ?? []) as AppUser[];
+  }
+
   async updateUserRole(id: string, role: UserRole): Promise<void> {
     const { error } = await this.client
       .from('user_profiles')
@@ -207,6 +216,25 @@ export class SettingsService {
       .update({ is_active: isActive })
       .eq('id', id);
     if (error) throw error;
+  }
+
+  async updateUser(payload: {
+    user_id: string;
+    profile?: {
+      full_name?: string;
+      role?: UserRole;
+      firm_id?: string | null;
+      tenant_id?: string | null;
+      is_active?: boolean;
+      is_super_admin?: boolean;
+    };
+    password?: string;
+  }): Promise<void> {
+    const { data, error } = await this.client.functions.invoke('update-user', {
+      body: payload,
+    });
+    if (error) throw new Error(error.message || 'Kullanıcı güncellenemedi.');
+    if (data?.error) throw new Error(data.error);
   }
 
   async createUser(userData: {

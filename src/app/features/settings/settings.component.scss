@@ -742,3 +742,107 @@ $shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
 .empty-row {
   text-align: center; color: #9ca3af; padding: 32px 14px !important;
 }
+
+// ─── User Edit Modal ────────────────────────────────────────────────
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 720px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #f0f0f0;
+
+  h3 { margin: 0 0 4px; font-size: 1.1rem; }
+}
+
+.modal-body {
+  padding: 16px 24px;
+}
+
+.modal-divider {
+  border: 0;
+  border-top: 1px solid #f0f0f0;
+  margin: 0;
+}
+
+.btn-icon {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  color: #6b7280;
+  display: inline-flex;
+  align-items: center;
+
+  &:hover { background: rgba(0, 0, 0, 0.05); }
+}
+
+.form-row--toggles {
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.form-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 6px 0;
+  font-size: 0.875rem;
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+
+  small { margin-left: 6px; font-size: 0.7rem; }
+
+  &--disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+    input { cursor: not-allowed; }
+  }
+}
+
+.form-help {
+  font-size: 0.8rem;
+  margin: 0 0 12px;
+}
+
+.form-group--grow { flex: 1 1 auto; }
+
+.form-group--actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+.btn--secondary {
+  background: #6366f1;
+  color: #fff;
+  border: 0;
+
+  &:hover:not(:disabled) { background: #4f46e5; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
