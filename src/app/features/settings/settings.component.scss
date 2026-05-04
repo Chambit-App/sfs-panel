@@ -79,6 +79,15 @@ $shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
       font-size: 0.9rem;
     }
 
+    &__icon {
+      font-size: 18px !important;
+      flex-shrink: 0;
+    }
+
+    &__label {
+      letter-spacing: 0.2px;
+    }
+
     &:hover {
       background: $color-bg-light;
       color: $color-text;
@@ -95,6 +104,16 @@ $shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
       }
     }
   }
+}
+
+// ─── Settings tabs icon + label (specific, fixes SCSS nesting depth) ──────────
+.settings-tabs__icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.settings-tabs__label {
+  letter-spacing: 0.2px;
 }
 
 // ─── Panel ──────────────────────────────────────────────────────────────────────
@@ -351,6 +370,9 @@ $shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 5px 12px;
   border: 1px solid $color-border;
   border-radius: $radius-sm;
@@ -360,6 +382,10 @@ $shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
   font-family: inherit;
   color: $color-text-muted;
   transition: all 0.15s;
+
+  &__icon {
+    font-size: 16px !important;
+  }
 
   &:hover {
     background: $color-bg-light;
@@ -557,15 +583,19 @@ $shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border: 1px solid $color-border;
   border-radius: $radius-sm;
   background: $color-bg-white;
   cursor: pointer;
-  font-size: 0.85rem;
   transition: all 0.15s;
   line-height: 1;
+  padding: 0;
+
+  .material-icons {
+    font-size: 18px;
+  }
 
   &--toggle {
     color: $color-text-muted;

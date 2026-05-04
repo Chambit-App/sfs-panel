@@ -44,7 +44,7 @@ export class SettingsComponent {
   isSuperAdmin = this.authService.isSuperAdmin;
 
   // ─── Tab State ────────────────────────────────────────────────────────────────
-  activeTab = signal<TabId>('tenants');
+  activeTab = signal<TabId>('categories');
 
   // ─── Loading ──────────────────────────────────────────────────────────────────
   loading = signal(false);
