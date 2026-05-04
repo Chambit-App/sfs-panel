@@ -59,10 +59,10 @@
   }
 
   &__value {
-    font-size: var(--font-size-2xl, 1.5rem);
+    font-size: 2rem;
     font-weight: 700;
     color: var(--color-text-primary, #1a1a2e);
-    line-height: 1;
+    line-height: 1.1;
     font-variant-numeric: tabular-nums;
   }
 
@@ -70,28 +70,33 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: var(--font-size-sm, 0.875rem);
-    font-weight: 600;
-    padding: 4px 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 6px 10px;
     border-radius: var(--radius-sm, 4px);
 
     &--up {
       color: var(--color-success, #2ecc71);
-      background: rgba(46, 204, 113, 0.1);
+      background: rgba(46, 204, 113, 0.12);
     }
 
     &--down {
       color: var(--color-danger, #e74c3c);
-      background: rgba(231, 76, 60, 0.1);
+      background: rgba(231, 76, 60, 0.12);
     }
 
     &--neutral {
       color: var(--color-text-muted, #9ca3af);
-      background: rgba(156, 163, 175, 0.1);
+      background: rgba(156, 163, 175, 0.12);
     }
   }
 
   &__trend-icon {
-    font-size: 18px;
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  &__delta {
+    font-variant-numeric: tabular-nums;
   }
 }

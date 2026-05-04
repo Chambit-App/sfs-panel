@@ -24,21 +24,24 @@
       title="Toplam Gelir"
       [value]="kpi().totalGelir"
       icon="trending_up"
-      trend="up"
+      [trend]="(gelirDelta() ?? 0) >= 0 ? 'up' : 'down'"
+      [deltaPercent]="gelirDelta()"
       format="currency"
     />
     <app-kpi-card
       title="Toplam Gider"
       [value]="kpi().totalGider"
       icon="trending_down"
-      trend="down"
+      [trend]="(giderDelta() ?? 0) <= 0 ? 'up' : 'down'"
+      [deltaPercent]="giderDelta()"
       format="currency"
     />
     <app-kpi-card
-      title="Net Kar/Zarar"
+      title="Gelir-Gider"
       [value]="kpi().netKarZarar"
       icon="account_balance_wallet"
-      [trend]="netTrend()"
+      [trend]="(netDelta() ?? 0) >= 0 ? 'up' : 'down'"
+      [deltaPercent]="netDelta()"
       format="currency"
     />
     <app-kpi-card

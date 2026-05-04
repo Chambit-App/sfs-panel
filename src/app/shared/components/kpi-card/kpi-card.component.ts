@@ -13,6 +13,7 @@ export class KpiCardComponent {
   @Input() icon = 'analytics';
   @Input() trend: 'up' | 'down' | 'neutral' = 'neutral';
   @Input() format: 'currency' | 'number' | 'percent' = 'number';
+  @Input() deltaPercent: number | null = null;
 
   get formattedValue(): string {
     if (this.format === 'currency') {
@@ -31,14 +32,20 @@ export class KpiCardComponent {
   }
 
   get trendIcon(): string {
-    if (this.trend === 'up') return 'trending_up';
-    if (this.trend === 'down') return 'trending_down';
-    return 'trending_flat';
+    if (this.trend === 'up') return 'arrow_upward';
+    if (this.trend === 'down') return 'arrow_downward';
+    return 'remove';
   }
 
   get trendClass(): string {
     if (this.trend === 'up') return 'kpi-card__trend--up';
     if (this.trend === 'down') return 'kpi-card__trend--down';
     return 'kpi-card__trend--neutral';
+  }
+
+  get formattedDelta(): string {
+    if (this.deltaPercent === null || !isFinite(this.deltaPercent)) return '';
+    const sign = this.deltaPercent > 0 ? '+' : '';
+    return `${sign}${this.deltaPercent.toFixed(1)}%`;
   }
 }
