@@ -2,7 +2,6 @@ import { Component, computed, inject, input, output, signal } from '@angular/cor
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TenantService } from '../../core/services/tenant.service';
 import { AuthService } from '../../core/services/auth.service';
-import { Firm } from '../../core/models/firm.model';
 
 interface NavItem {
   label: string;
@@ -33,7 +32,6 @@ export class SidebarComponent {
   closeMobile = output<void>();
 
   reportsExpanded = signal(true);
-  firmDropdownOpen = signal(false);
 
   // Reports section - rendered as a special collapsible block.
   reportItems: NavItem[] = [
@@ -88,25 +86,10 @@ export class SidebarComponent {
 
   onNavClick(): void {
     this.closeMobile.emit();
-    this.firmDropdownOpen.set(false);
   }
 
   toggleReports(): void {
     if (this.collapsed()) return;
     this.reportsExpanded.update(v => !v);
-  }
-
-  toggleFirmDropdown(event: Event): void {
-    event.stopPropagation();
-    this.firmDropdownOpen.update(v => !v);
-  }
-
-  selectFirm(firm: Firm): void {
-    this.tenantService.switchFirm(firm);
-    this.firmDropdownOpen.set(false);
-  }
-
-  closeFirmDropdown(): void {
-    this.firmDropdownOpen.set(false);
   }
 }
