@@ -25,6 +25,7 @@ export const routes: Routes = [
       { path: 'reports/top-cari', loadComponent: () => import('./features/reports/top-cari/top-cari.component').then(m => m.TopCariComponent) },
       { path: 'reports/rolling-trend', loadComponent: () => import('./features/reports/rolling-trend/rolling-trend.component').then(m => m.RollingTrendComponent) },
       { path: 'reports/bank-trend', loadComponent: () => import('./features/reports/bank-trend/bank-trend.component').then(m => m.BankTrendComponent) },
+      { path: 'reports/payment-schedule', loadComponent: () => import('./features/reports/payment-schedule/payment-schedule.component').then(m => m.PaymentScheduleComponent) },
       { path: 'consolidated', loadComponent: () => import('./features/consolidated/consolidated.component').then(m => m.ConsolidatedComponent) },
       {
         path: 'settings',

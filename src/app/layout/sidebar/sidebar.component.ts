@@ -37,6 +37,7 @@ export class SidebarComponent {
   reportItems: NavItem[] = [
     { label: 'Konsolide', path: '/consolidated', icon: 'view_module' },
     { label: 'Gelir-Gider Tablosu', path: '/reports', icon: 'table_chart', exact: true },
+    { label: 'Ödeme Takvimi', path: '/reports/payment-schedule', icon: 'event_note' },
     { label: 'Aylık Trend', path: '/reports/rolling-trend', icon: 'trending_up' },
     { label: 'Bütçe Performans', path: '/reports/budget', icon: 'savings' },
     { label: 'Cari Yaşlandırma', path: '/reports/aging', icon: 'schedule' },
