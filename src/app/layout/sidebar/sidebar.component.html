@@ -23,6 +23,7 @@
               <a
                 [routerLink]="item.path"
                 routerLinkActive="sidebar__nav-link--active"
+                [routerLinkActiveOptions]="item.exact ? { exact: true } : { exact: false }"
                 class="sidebar__nav-link"
                 [title]="collapsed() ? item.label : ''"
                 (click)="onNavClick()"

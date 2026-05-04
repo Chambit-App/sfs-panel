@@ -1,0 +1,73 @@
+<app-page-header
+  title="Geciken İşlemler"
+  [subtitle]="activeFirm()?.name ?? 'Firma seçilmedi'"
+/>
+
+@if (!activeFirm()) {
+  <div class="ovd__empty">
+    <span class="material-icons">business</span>
+    <p>Devam etmek için üst menüden bir firma seçin.</p>
+  </div>
+} @else {
+  <div class="ovd__toolbar">
+    <div class="ovd__control">
+      <label>Tip</label>
+      <select [ngModel]="filterType()" (ngModelChange)="filterType.set($event)">
+        <option value="ALL">Hepsi</option>
+        <option value="GELIR">Gelir (Geciken Tahsilat)</option>
+        <option value="GIDER">Gider (Geciken Ödeme)</option>
+      </select>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="ovd__loading"><span class="material-icons spin">refresh</span> Yükleniyor…</div>
+  } @else if (filtered().length === 0) {
+    <div class="ovd__empty">
+      <span class="material-icons">check_circle</span>
+      <p>Vadesi geçmiş işlem yok.</p>
+    </div>
+  } @else {
+    <div class="ovd__totals">
+      <div class="ovd__total"><span>İşlem Sayısı</span><strong>{{ totals().count }}</strong></div>
+      <div class="ovd__total ovd__total--g"><span>Geciken Tahsilat</span><strong>{{ totals().gelir | currencyTry }}</strong></div>
+      <div class="ovd__total ovd__total--r"><span>Geciken Ödeme</span><strong>{{ totals().gider | currencyTry }}</strong></div>
+      <div class="ovd__total"><span>En Uzun Gecikme</span><strong>{{ totals().maxLate }} gün</strong></div>
+    </div>
+
+    <div class="ovd__table-wrapper">
+      <table class="ovd__table">
+        <thead>
+          <tr>
+            <th>Tip</th>
+            <th>Cari</th>
+            <th>Fatura No</th>
+            <th>Vade</th>
+            <th class="num">Gecikme</th>
+            <th class="num">Tutar</th>
+            <th>Açıklama</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of filtered(); track r.id) {
+            <tr>
+              <td>
+                <span class="badge" [class.badge--g]="r.type === 'GELIR'" [class.badge--r]="r.type === 'GIDER'">
+                  {{ r.type === 'GELIR' ? 'Tahsilat' : 'Ödeme' }}
+                </span>
+              </td>
+              <td>{{ r.cari_name }}</td>
+              <td><code>{{ r.invoice_no || '—' }}</code></td>
+              <td>{{ r.due_date | turkishDate }}</td>
+              <td class="num">
+                <span [class]="bucketClass(r.days_late)">{{ r.days_late }} gün</span>
+              </td>
+              <td class="num">{{ r.amount | currencyTry }}</td>
+              <td class="muted">{{ r.description || '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}

@@ -7,6 +7,7 @@ interface NavItem {
   label: string;
   path: string;
   icon: string;
+  exact?: boolean;
 }
 
 interface NavGroup {
@@ -54,8 +55,12 @@ export class SidebarComponent {
     {
       groupLabel: 'Raporlar',
       items: [
-        { label: 'Raporlar', path: '/reports', icon: 'bar_chart' },
-        { label: 'Konsolide', path: '/consolidated', icon: 'table_chart' },
+        { label: 'Gelir-Gider Tablosu', path: '/reports', icon: 'table_chart', exact: true },
+        { label: 'Bütçe Performans', path: '/reports/budget', icon: 'savings' },
+        { label: 'Cari Yaşlandırma', path: '/reports/aging', icon: 'schedule' },
+        { label: 'Gider Dağılımı', path: '/reports/expense-breakdown', icon: 'pie_chart' },
+        { label: 'Geciken İşlemler', path: '/reports/overdue', icon: 'warning' },
+        { label: 'Konsolide', path: '/consolidated', icon: 'view_module' },
       ],
     },
     {

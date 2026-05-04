@@ -48,6 +48,56 @@ export interface PnLMonthSummary {
   net: number;
 }
 
+// ── Budget vs Actual row (from budget_vs_actual view) ────────────────────────
+export interface BudgetVsActualRow {
+  id: string;
+  firm_id: string;
+  year: number;
+  month: number;
+  chart_account_id: string;
+  account_code: string;
+  account_name: string;
+  account_type: 'GELIR' | 'GIDER';
+  planned_amount: number;
+  actual_amount: number;
+  variance: number;
+  variance_pct: number;
+}
+
+// ── Cari aging row ───────────────────────────────────────────────────────────
+export interface CariAgingRow {
+  cari_id: string;
+  cari_name: string;
+  cari_type: 'MUSTERI' | 'TEDARIKCI';
+  current: number;     // not yet due
+  d0_30: number;
+  d31_60: number;
+  d61_90: number;
+  d90_plus: number;
+  total: number;
+}
+
+// ── Expense breakdown slice ──────────────────────────────────────────────────
+export interface ExpenseSliceRow {
+  code: string;
+  name: string;
+  amount: number;
+  percent: number;
+}
+
+// ── Overdue transaction row ──────────────────────────────────────────────────
+export interface OverdueRow {
+  id: string;
+  type: 'GELIR' | 'GIDER';
+  amount: number;
+  due_date: string;
+  days_late: number;
+  invoice_no: string;
+  description: string;
+  cari_name: string;
+  cari_type: 'MUSTERI' | 'TEDARIKCI';
+}
+
 @Injectable({ providedIn: 'root' })
 export class ReportsService {
   private supabaseService = inject(SupabaseService);
@@ -222,6 +272,146 @@ export class ReportsService {
     }
 
     return [...codeMap.values()].sort((a, b) => a.code.localeCompare(b.code));
+  }
+
+  // ── Public: Budget vs Actual ───────────────────────────────────────────────
+  async getBudgetVsActual(firmId: string, year: number): Promise<BudgetVsActualRow[]> {
+    const { data, error } = await this.client
+      .from('budget_vs_actual')
+      .select('*')
+      .eq('firm_id', firmId)
+      .eq('year', year)
+      .order('account_code', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching budget_vs_actual:', error);
+      return [];
+    }
+
+    return (data ?? []) as BudgetVsActualRow[];
+  }
+
+  // ── Public: Cari Aging ─────────────────────────────────────────────────────
+  async getCariAging(firmId: string): Promise<CariAgingRow[]> {
+    const today = new Date().toISOString().split('T')[0];
+    const { data, error } = await this.client
+      .from('transactions')
+      .select('cari_id, due_date, type, amount, cari_accounts!inner(name, type, firm_id)')
+      .eq('firm_id', firmId)
+      .eq('status', 'BEKLIYOR');
+
+    if (error) {
+      console.error('Error fetching aging:', error);
+      return [];
+    }
+
+    const map = new Map<string, CariAgingRow>();
+    const now = new Date(today);
+
+    for (const row of (data as unknown as Array<Record<string, unknown>> ?? [])) {
+      const cariRaw = row['cari_accounts'];
+      const cari = (Array.isArray(cariRaw) ? cariRaw[0] : cariRaw) as
+        | { name: string; type: 'MUSTERI' | 'TEDARIKCI' }
+        | null;
+      if (!cari) continue;
+
+      const cariId = row['cari_id'] as string;
+      let entry = map.get(cariId);
+      if (!entry) {
+        entry = {
+          cari_id: cariId,
+          cari_name: cari.name,
+          cari_type: cari.type,
+          current: 0,
+          d0_30: 0,
+          d31_60: 0,
+          d61_90: 0,
+          d90_plus: 0,
+          total: 0,
+        };
+        map.set(cariId, entry);
+      }
+
+      const amount = Number(row['amount']) || 0;
+      const dueDate = new Date(row['due_date'] as string);
+      const daysLate = Math.floor((now.getTime() - dueDate.getTime()) / 86400000);
+
+      if (daysLate < 0) entry.current += amount;
+      else if (daysLate <= 30) entry.d0_30 += amount;
+      else if (daysLate <= 60) entry.d31_60 += amount;
+      else if (daysLate <= 90) entry.d61_90 += amount;
+      else entry.d90_plus += amount;
+
+      entry.total += amount;
+    }
+
+    return [...map.values()].sort((a, b) => b.total - a.total);
+  }
+
+  // ── Public: Expense Breakdown (donut) ──────────────────────────────────────
+  async getExpenseBreakdown(firmId: string, year: number): Promise<ExpenseSliceRow[]> {
+    const rows = await this.fetchMonthlyRows(firmId, year);
+    const byCode = new Map<string, ExpenseSliceRow>();
+
+    for (const r of rows) {
+      if (r.account_type !== 'GIDER') continue;
+      const code = r.parent_code ?? r.account_code;
+      const name = r.parent_code
+        ? rows.find(x => x.account_code === r.parent_code)?.account_name ?? code
+        : r.account_name;
+
+      const entry = byCode.get(code) ?? { code, name, amount: 0, percent: 0 };
+      entry.amount += r.total_amount ?? 0;
+      byCode.set(code, entry);
+    }
+
+    const slices = [...byCode.values()].sort((a, b) => b.amount - a.amount);
+    const total = slices.reduce((s, x) => s + x.amount, 0);
+    if (total > 0) {
+      for (const s of slices) s.percent = (s.amount / total) * 100;
+    }
+    return slices;
+  }
+
+  // ── Public: Overdue Transactions ───────────────────────────────────────────
+  async getOverdueTransactions(firmId: string): Promise<OverdueRow[]> {
+    const today = new Date().toISOString().split('T')[0];
+    const { data, error } = await this.client
+      .from('transactions')
+      .select(
+        'id, type, amount, due_date, invoice_no, description, ' +
+          'cari_accounts!inner(name, type, firm_id)'
+      )
+      .eq('firm_id', firmId)
+      .eq('status', 'BEKLIYOR')
+      .lt('due_date', today)
+      .order('due_date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching overdue:', error);
+      return [];
+    }
+
+    const now = new Date(today);
+    return (data as unknown as Array<Record<string, unknown>> ?? []).map(row => {
+      const cariRaw = row['cari_accounts'];
+      const cari = (Array.isArray(cariRaw) ? cariRaw[0] : cariRaw) as
+        | { name: string; type: 'MUSTERI' | 'TEDARIKCI' }
+        | null;
+      const dueDate = new Date(row['due_date'] as string);
+      const daysLate = Math.floor((now.getTime() - dueDate.getTime()) / 86400000);
+      return {
+        id: row['id'] as string,
+        type: row['type'] as 'GELIR' | 'GIDER',
+        amount: Number(row['amount']) || 0,
+        due_date: row['due_date'] as string,
+        days_late: daysLate,
+        invoice_no: (row['invoice_no'] as string) ?? '',
+        description: (row['description'] as string) ?? '',
+        cari_name: cari?.name ?? '—',
+        cari_type: cari?.type ?? 'MUSTERI',
+      };
+    });
   }
 
   // ── Public: P&L summary ───────────────────────────────────────────────────

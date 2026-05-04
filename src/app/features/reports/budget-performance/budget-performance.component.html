@@ -1,0 +1,98 @@
+<app-page-header
+  title="Bütçe Performans Raporu"
+  [subtitle]="activeFirm()?.name ?? 'Firma seçilmedi'"
+/>
+
+@if (!activeFirm()) {
+  <div class="bp__empty">
+    <span class="material-icons">business</span>
+    <p>Devam etmek için üst menüden bir firma seçin.</p>
+  </div>
+} @else {
+  <div class="bp__toolbar">
+    <div class="bp__control">
+      <label>Yıl</label>
+      <select [ngModel]="selectedYear()" (ngModelChange)="onYearChange($event)">
+        @for (y of yearOptions; track y) { <option [value]="y">{{ y }}</option> }
+      </select>
+    </div>
+    <div class="bp__control">
+      <label>Ay</label>
+      <select [ngModel]="selectedMonth()" (ngModelChange)="onMonthChange($event)">
+        <option value="ALL">Tümü (yıllık)</option>
+        @for (m of monthOptions; track m.value) {
+          <option [value]="m.value">{{ m.label }}</option>
+        }
+      </select>
+    </div>
+    <div class="bp__control">
+      <label>Tip</label>
+      <select [ngModel]="filterType()" (ngModelChange)="filterType.set($event)">
+        <option value="ALL">Hepsi</option>
+        <option value="GELIR">Sadece Gelir</option>
+        <option value="GIDER">Sadece Gider</option>
+      </select>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="bp__loading"><span class="material-icons spin">refresh</span> Yükleniyor…</div>
+  } @else if (accountSummaries().length === 0) {
+    <div class="bp__empty">
+      <span class="material-icons">savings</span>
+      <p>Bu seçim için bütçe planı bulunamadı.</p>
+    </div>
+  } @else {
+    <!-- Top stats -->
+    <div class="bp__totals">
+      <div class="bp__total-card">
+        <span class="bp__total-label">Planlanan</span>
+        <span class="bp__total-value">{{ totals().planned | currencyTry }}</span>
+      </div>
+      <div class="bp__total-card">
+        <span class="bp__total-label">Gerçekleşen</span>
+        <span class="bp__total-value">{{ totals().actual | currencyTry }}</span>
+      </div>
+      <div class="bp__total-card" [class.bad]="totals().variance > 0" [class.good]="totals().variance < 0">
+        <span class="bp__total-label">Sapma</span>
+        <span class="bp__total-value">
+          {{ totals().variance | currencyTry }}
+          <small>({{ totals().variancePct.toFixed(1) }}%)</small>
+        </span>
+      </div>
+    </div>
+
+    <div class="bp__table-wrapper">
+      <table class="bp__table">
+        <thead>
+          <tr>
+            <th>Kod</th>
+            <th>Hesap Adı</th>
+            <th>Tip</th>
+            <th class="num">Planlanan</th>
+            <th class="num">Gerçekleşen</th>
+            <th class="num">Sapma</th>
+            <th class="num">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of accountSummaries(); track a.code) {
+            <tr>
+              <td><code>{{ a.code }}</code></td>
+              <td>{{ a.name }}</td>
+              <td>
+                <span class="badge" [class.badge--gelir]="a.type === 'GELIR'" [class.badge--gider]="a.type === 'GIDER'">
+                  {{ a.type }}
+                </span>
+              </td>
+              <td class="num">{{ a.planned | currencyTry }}</td>
+              <td class="num">{{ a.actual | currencyTry }}</td>
+              <td class="num" [class]="rowVarianceClass(a)">{{ a.variance | currencyTry }}</td>
+              <td class="num" [class]="rowVarianceClass(a)">{{ a.variancePct.toFixed(1) }}%</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}

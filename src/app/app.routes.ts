@@ -18,6 +18,10 @@ export const routes: Routes = [
       { path: 'bank/import', loadComponent: () => import('./features/excel-import/excel-import.component').then(m => m.ExcelImportComponent), data: { schemaKey: 'bank' } },
       { path: 'budget', loadComponent: () => import('./features/budget/budget.component').then(m => m.BudgetComponent) },
       { path: 'reports', loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent) },
+      { path: 'reports/budget', loadComponent: () => import('./features/reports/budget-performance/budget-performance.component').then(m => m.BudgetPerformanceComponent) },
+      { path: 'reports/aging', loadComponent: () => import('./features/reports/cari-aging/cari-aging.component').then(m => m.CariAgingComponent) },
+      { path: 'reports/expense-breakdown', loadComponent: () => import('./features/reports/expense-breakdown/expense-breakdown.component').then(m => m.ExpenseBreakdownComponent) },
+      { path: 'reports/overdue', loadComponent: () => import('./features/reports/overdue-transactions/overdue-transactions.component').then(m => m.OverdueTransactionsComponent) },
       { path: 'consolidated', loadComponent: () => import('./features/consolidated/consolidated.component').then(m => m.ConsolidatedComponent) },
       {
         path: 'settings',
