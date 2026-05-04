@@ -32,7 +32,7 @@
       title="Toplam Gider"
       [value]="kpi().totalGider"
       icon="trending_down"
-      [trend]="(giderDelta() ?? 0) <= 0 ? 'up' : 'down'"
+      [trend]="(giderDelta() ?? 0) >= 0 ? 'up' : 'down'"
       [deltaPercent]="giderDelta()"
       format="currency"
     />
