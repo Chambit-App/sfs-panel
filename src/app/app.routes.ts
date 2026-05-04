@@ -26,6 +26,8 @@ export const routes: Routes = [
       { path: 'reports/rolling-trend', loadComponent: () => import('./features/reports/rolling-trend/rolling-trend.component').then(m => m.RollingTrendComponent) },
       { path: 'reports/bank-trend', loadComponent: () => import('./features/reports/bank-trend/bank-trend.component').then(m => m.BankTrendComponent) },
       { path: 'reports/payment-schedule', loadComponent: () => import('./features/reports/payment-schedule/payment-schedule.component').then(m => m.PaymentScheduleComponent) },
+      { path: 'reports/bank-statement', loadComponent: () => import('./features/reports/bank-statement/bank-statement.component').then(m => m.BankStatementComponent) },
+      { path: 'reports/dso-dpo', loadComponent: () => import('./features/reports/dso-dpo/dso-dpo.component').then(m => m.DsoDpoComponent) },
       { path: 'consolidated', loadComponent: () => import('./features/consolidated/consolidated.component').then(m => m.ConsolidatedComponent) },
       {
         path: 'settings',
