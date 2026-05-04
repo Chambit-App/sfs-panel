@@ -391,7 +391,7 @@ export class SettingsComponent {
 
   readonly roleLabels: Record<UserRole, string> = {
     super_admin: 'Süper Admin',
-    tenant_admin: 'Tenant Yöneticisi',
+    tenant_admin: 'Grup Yöneticisi',
     firm_manager: 'Firma Yöneticisi',
     accountant: 'Muhasebeci',
     viewer: 'Görüntüleyici',
@@ -668,7 +668,7 @@ export class SettingsComponent {
     try {
       this.tenants.set(await this.settingsService.getTenants());
     } catch {
-      this.notificationService.error('Tenantlar yüklenirken hata oluştu.');
+      this.notificationService.error('Gruplar yüklenirken hata oluştu.');
     } finally {
       this.loading.set(false);
     }
@@ -705,10 +705,10 @@ export class SettingsComponent {
       const id = this.tenantEditingId();
       if (id) {
         await this.settingsService.updateTenant(id, val as Partial<Tenant>);
-        this.notificationService.success('Tenant güncellendi.');
+        this.notificationService.success('Grup güncellendi.');
       } else {
         const created = await this.settingsService.createTenant(val as Partial<Tenant>);
-        this.notificationService.success('Tenant oluşturuldu.');
+        this.notificationService.success('Grup oluşturuldu.');
         // Refresh tenant list in TenantService so topbar picks it up
         await this.tenantService.loadTenants();
       }
@@ -717,7 +717,7 @@ export class SettingsComponent {
       this.tenantForm.reset();
       await this.loadTenants();
     } catch {
-      this.notificationService.error('Tenant kaydedilirken hata oluştu.');
+      this.notificationService.error('Grup kaydedilirken hata oluştu.');
     } finally {
       this.saving.set(false);
     }
@@ -758,7 +758,7 @@ export class SettingsComponent {
         await this.loadChartAccounts();
       } else if (ctx === 'tenant') {
         await this.settingsService.deleteTenant(id);
-        this.notificationService.success('Tenant silindi.');
+        this.notificationService.success('Grup silindi.');
         await this.tenantService.loadTenants();
         await this.loadTenants();
       } else if (ctx === 'firm') {
@@ -797,7 +797,7 @@ export class SettingsComponent {
   // ─── Template Helpers ─────────────────────────────────────────────────────────
 
   getDeleteTitle(): string {
-    const map: Record<string, string> = { category: 'Kategoriyi Sil', chart: 'Hesabı Sil', firm: 'Firmayı Sil', tenant: 'Tenantı Sil' };
+    const map: Record<string, string> = { category: 'Kategoriyi Sil', chart: 'Hesabı Sil', firm: 'Firmayı Sil', tenant: 'Grubu Sil' };
     return map[this.deleteContext()] ?? 'Sil';
   }
 
@@ -806,7 +806,7 @@ export class SettingsComponent {
       category: 'Bu kategoriyi silmek istediğinizden emin misiniz?',
       chart: 'Bu hesabı silmek istediğinizden emin misiniz? İlgili işlemler etkilenebilir.',
       firm: 'Bu firmayı silmek istediğinizden emin misiniz?',
-      tenant: 'Bu tenantı ve altındaki tüm firmaları silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!',
+      tenant: 'Bu grubu ve altındaki tüm firmaları silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!',
     };
     return map[this.deleteContext()] ?? 'Silmek istediğinizden emin misiniz?';
   }

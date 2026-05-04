@@ -18,7 +18,7 @@
       [class.settings-tabs__tab--active]="activeTab() === 'tenants'"
       (click)="setTab('tenants')"
     >
-      <span class="tab-icon material-icons" style="font-size:16px">domain</span> Tenantlar
+      <span class="tab-icon material-icons" style="font-size:16px">domain</span> Gruplar
     </button>
     <button
       class="settings-tabs__tab"
@@ -57,11 +57,11 @@
       <!-- Add/Edit Form -->
       @if (showTenantForm()) {
         <div class="form-card">
-          <h3 class="form-card__title">{{ tenantEditingId() ? 'Tenant Düzenle' : 'Yeni Tenant Ekle' }}</h3>
+          <h3 class="form-card__title">{{ tenantEditingId() ? 'Grup Düzenle' : 'Yeni Grup Ekle' }}</h3>
           <form [formGroup]="tenantForm" (ngSubmit)="saveTenant()">
             <div class="form-row">
               <div class="form-field form-field--grow">
-                <label>Tenant Adı</label>
+                <label>Grup Adı</label>
                 <input type="text" formControlName="name" placeholder="Örn: ON7 Group" class="form-input" />
               </div>
               <div class="form-field">
@@ -97,10 +97,10 @@
 
       <!-- Header + Add Button -->
       <div class="section-header">
-        <h3>Tenant Listesi</h3>
+        <h3>Grup Listesi</h3>
         @if (!showTenantForm()) {
           <button class="btn btn--primary" (click)="openNewTenant()">
-            <span class="material-icons" style="font-size:16px">add</span> Yeni Tenant
+            <span class="material-icons" style="font-size:16px">add</span> Yeni Grup
           </button>
         }
       </div>
@@ -112,7 +112,7 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Tenant Adı</th>
+                <th>Grup Adı</th>
                 <th>Vergi No</th>
                 <th>Plan</th>
                 <th>Durum</th>
@@ -139,7 +139,7 @@
                   </td>
                   <td>{{ tenant.created_at | date:'dd.MM.yyyy' }}</td>
                   <td>
-                    <button class="action-btn" (click)="selectTenantInTopbar(tenant)" title="Bu tenanta geç">
+                    <button class="action-btn" (click)="selectTenantInTopbar(tenant)" title="Bu gruba geç">
                       <span class="material-icons">swap_horiz</span>
                     </button>
                     <button class="action-btn" (click)="editTenant(tenant)" title="Düzenle">
@@ -152,7 +152,7 @@
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="6" class="empty-row">Henüz tenant eklenmemiş.</td>
+                  <td colspan="6" class="empty-row">Henüz grup eklenmemiş.</td>
                 </tr>
               }
             </tbody>
@@ -413,7 +413,7 @@
       <div class="section-header">
         <div>
           <h3 class="section-title">Firma Listesi</h3>
-          <p class="section-subtitle">Tüm tenantlara ait firmalar</p>
+          <p class="section-subtitle">Tüm gruplara ait firmalar</p>
         </div>
         <button class="btn btn--primary" (click)="openNewFirm()">+ Yeni Firma</button>
       </div>
@@ -425,19 +425,19 @@
           <form [formGroup]="firmForm" (ngSubmit)="saveFirm()" class="firm-form">
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Tenant <span class="required">*</span></label>
+                <label class="form-label">Grup <span class="required">*</span></label>
                 <select
                   formControlName="tenant_id"
                   class="form-input"
                   [class.form-input--invalid]="firmForm.get('tenant_id')?.invalid && firmForm.get('tenant_id')?.touched"
                 >
-                  <option value="" disabled>Tenant seçiniz...</option>
+                  <option value="" disabled>Grup seçiniz...</option>
                   @for (tenant of tenants(); track tenant.id) {
                     <option [value]="tenant.id">{{ tenant.name }}</option>
                   }
                 </select>
                 @if (firmForm.get('tenant_id')?.invalid && firmForm.get('tenant_id')?.touched) {
-                  <span class="form-error">Tenant seçimi zorunludur.</span>
+                  <span class="form-error">Grup seçimi zorunludur.</span>
                 }
               </div>
               <div class="form-group">
@@ -496,7 +496,7 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Tenant</th>
+                <th>Grup</th>
                 <th>Firma Adı</th>
                 <th>Vergi No</th>
                 <th>Adres</th>
@@ -582,15 +582,15 @@
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Tenant <span class="required">*</span></label>
+                <label class="form-label">Grup <span class="required">*</span></label>
                 <select formControlName="tenant_id" class="form-input">
-                  <option value="" disabled>Tenant seçiniz...</option>
+                  <option value="" disabled>Grup seçiniz...</option>
                   @for (tenant of tenants(); track tenant.id) {
                     <option [value]="tenant.id">{{ tenant.name }}</option>
                   }
                 </select>
                 @if (userForm.get('tenant_id')?.invalid && userForm.get('tenant_id')?.touched) {
-                  <span class="form-error">Tenant seçimi zorunludur.</span>
+                  <span class="form-error">Grup seçimi zorunludur.</span>
                 }
               </div>
               <div class="form-group">
@@ -631,7 +631,7 @@
             <thead>
               <tr>
                 <th>Ad Soyad</th>
-                <th>Tenant</th>
+                <th>Grup</th>
                 <th>Rol</th>
                 <th>Firma</th>
                 <th>Aktif</th>
@@ -729,9 +729,9 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Tenant <span class="required">*</span></label>
+              <label class="form-label">Grup <span class="required">*</span></label>
               <select formControlName="tenant_id" class="form-input">
-                <option value="" disabled>Tenant seçiniz...</option>
+                <option value="" disabled>Grup seçiniz...</option>
                 @for (tenant of tenants(); track tenant.id) {
                   <option [value]="tenant.id">{{ tenant.name }}</option>
                 }

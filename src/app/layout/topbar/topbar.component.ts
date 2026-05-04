@@ -29,7 +29,7 @@ export class TopbarComponent {
     const role = this.auth.currentUser()?.role;
     const labels: Record<string, string> = {
       super_admin: 'Süper Admin',
-      tenant_admin: 'Tenant Admin',
+      tenant_admin: 'Grup Yöneticisi',
       firm_manager: 'Firma Yöneticisi',
       accountant: 'Muhasebeci',
       viewer: 'İzleyici',

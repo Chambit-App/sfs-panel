@@ -10,13 +10,13 @@
       </button>
     }
 
-    <!-- Tenant selector (super_admin only) -->
+    <!-- Grup selector (super_admin only) -->
     @if (auth.isSuperAdmin()) {
       <div class="topbar__dropdown" [class.topbar__dropdown--open]="tenantDropdownOpen()">
         <button class="topbar__selector" (click)="toggleTenantDropdown()">
           <span class="material-icons topbar__selector-icon">domain</span>
           <span class="topbar__selector-label hide-mobile">
-            {{ tenantService.activeTenant()?.name ?? 'Tenant Seçiniz' }}
+            {{ tenantService.activeTenant()?.name ?? 'Grup Seçiniz' }}
           </span>
           <span class="material-icons topbar__selector-chevron hide-mobile">expand_more</span>
         </button>
@@ -39,7 +39,7 @@
               </button>
             }
             @if (tenantService.tenants().length === 0) {
-              <div class="topbar__dropdown-empty">Tenant bulunamadı</div>
+              <div class="topbar__dropdown-empty">Grup bulunamadı</div>
             }
           </div>
         }
