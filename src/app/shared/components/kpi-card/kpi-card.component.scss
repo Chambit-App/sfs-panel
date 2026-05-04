@@ -12,8 +12,9 @@
 
   &__header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
+    gap: 12px;
     margin-bottom: 16px;
   }
 
@@ -22,22 +23,6 @@
     font-weight: 500;
     color: var(--color-text-secondary, #6b7280);
     line-height: 1.4;
-  }
-
-  &__icon-wrapper {
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-md, 8px);
-    background: rgba(233, 69, 96, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  &__icon {
-    font-size: 20px;
-    color: var(--color-accent, #e94560);
   }
 
   &__body {
@@ -67,13 +52,14 @@
   }
 
   &__trend {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 1rem;
+    gap: 2px;
+    font-size: 0.8125rem;
     font-weight: 700;
-    padding: 6px 10px;
-    border-radius: var(--radius-sm, 4px);
+    padding: 3px 8px;
+    border-radius: 999px;
+    flex-shrink: 0;
 
     &--up {
       color: var(--color-success, #2ecc71);
@@ -92,7 +78,7 @@
   }
 
   &__trend-icon {
-    font-size: 28px;
+    font-size: 16px;
     font-weight: 700;
   }
 
