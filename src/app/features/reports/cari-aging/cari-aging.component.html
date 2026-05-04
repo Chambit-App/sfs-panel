@@ -18,6 +18,15 @@
         <option value="TEDARIKCI">Tedarikçi (Borç)</option>
       </select>
     </div>
+    <button
+      type="button"
+      class="aging__export"
+      (click)="exportExcel()"
+      [disabled]="filtered().length === 0"
+    >
+      <span class="material-icons">download</span>
+      Excel İndir
+    </button>
     <p class="aging__hint">
       <span class="material-icons">info</span>
       Yaşlandırma sadece <strong>BEKLİYOR</strong> durumdaki işlemler üzerinden hesaplanır.

@@ -33,6 +33,15 @@
         <option value="GIDER">Sadece Gider</option>
       </select>
     </div>
+    <button
+      type="button"
+      class="bp__export"
+      (click)="exportExcel()"
+      [disabled]="accountSummaries().length === 0"
+    >
+      <span class="material-icons">download</span>
+      Excel İndir
+    </button>
   </div>
 
   @if (loading()) {

@@ -5,6 +5,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { CurrencyTryPipe } from '../../../shared/pipes/currency-try.pipe';
 import { TenantService } from '../../../core/services/tenant.service';
 import { ReportsService, CariAgingRow } from '../reports.service';
+import { ExcelService } from '../../../core/services/excel.service';
 
 type TypeFilter = 'ALL' | 'MUSTERI' | 'TEDARIKCI';
 
@@ -18,6 +19,7 @@ type TypeFilter = 'ALL' | 'MUSTERI' | 'TEDARIKCI';
 export class CariAgingComponent {
   private tenantService = inject(TenantService);
   private reportsService = inject(ReportsService);
+  private excel = inject(ExcelService);
 
   activeFirm = this.tenantService.activeFirm;
   loading = signal(false);
@@ -60,5 +62,34 @@ export class CariAgingComponent {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  exportExcel(): void {
+    const data = this.filtered().map(r => ({
+      cari: r.cari_name,
+      tip: r.cari_type === 'MUSTERI' ? 'Müşteri' : 'Tedarikçi',
+      vadesi_gelmemis: r.current,
+      d0_30: r.d0_30,
+      d31_60: r.d31_60,
+      d61_90: r.d61_90,
+      d90_plus: r.d90_plus,
+      toplam: r.total,
+    }));
+    const blob = this.excel.exportTable(
+      'Cari Yaşlandırma',
+      [
+        { key: 'cari', label: 'Cari' },
+        { key: 'tip', label: 'Tip' },
+        { key: 'vadesi_gelmemis', label: 'Vadesi Gelmemiş' },
+        { key: 'd0_30', label: '0-30 Gün' },
+        { key: 'd31_60', label: '31-60 Gün' },
+        { key: 'd61_90', label: '61-90 Gün' },
+        { key: 'd90_plus', label: '90+ Gün' },
+        { key: 'toplam', label: 'Toplam' },
+      ],
+      data,
+    );
+    const stamp = new Date().toISOString().split('T')[0];
+    this.excel.download(blob, `cari_yaslandirma_${stamp}.xlsx`);
   }
 }

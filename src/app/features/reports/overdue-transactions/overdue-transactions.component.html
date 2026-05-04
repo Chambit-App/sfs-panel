@@ -18,6 +18,15 @@
         <option value="GIDER">Gider (Geciken Ödeme)</option>
       </select>
     </div>
+    <button
+      type="button"
+      class="ovd__export"
+      (click)="exportExcel()"
+      [disabled]="filtered().length === 0"
+    >
+      <span class="material-icons">download</span>
+      Excel İndir
+    </button>
   </div>
 
   @if (loading()) {

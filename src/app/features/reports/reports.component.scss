@@ -104,6 +104,29 @@
   flex-wrap: wrap;
 }
 
+.reports__export {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: #fff;
+  border: 1px solid var(--color-border, #d1d5db);
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  height: fit-content;
+
+  &:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: var(--color-accent, #e94560);
+    color: var(--color-accent, #e94560);
+  }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  .material-icons { font-size: 18px; }
+}
+
 .reports__control-group {
   display: flex;
   flex-direction: column;

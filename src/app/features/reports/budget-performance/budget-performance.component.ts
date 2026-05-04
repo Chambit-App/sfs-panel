@@ -5,6 +5,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { CurrencyTryPipe } from '../../../shared/pipes/currency-try.pipe';
 import { TenantService } from '../../../core/services/tenant.service';
 import { ReportsService, BudgetVsActualRow } from '../reports.service';
+import { ExcelService } from '../../../core/services/excel.service';
 
 const MONTHS = [
   'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
@@ -31,6 +32,7 @@ interface AccountSummary {
 export class BudgetPerformanceComponent {
   private tenantService = inject(TenantService);
   private reportsService = inject(ReportsService);
+  private excel = inject(ExcelService);
 
   activeFirm = this.tenantService.activeFirm;
   loading = signal(false);
@@ -120,5 +122,32 @@ export class BudgetPerformanceComponent {
     const overBudget = a.variance > 0;
     if (a.type === 'GIDER') return overBudget ? 'bad' : 'good';
     return overBudget ? 'good' : 'bad';
+  }
+
+  exportExcel(): void {
+    const data = this.accountSummaries().map(a => ({
+      kod: a.code,
+      hesap: a.name,
+      tip: a.type,
+      planlanan: a.planned,
+      gerceklesen: a.actual,
+      sapma: a.variance,
+      sapma_yuzde: Number(a.variancePct.toFixed(2)),
+    }));
+    const blob = this.excel.exportTable(
+      'Bütçe Performans',
+      [
+        { key: 'kod', label: 'Kod' },
+        { key: 'hesap', label: 'Hesap' },
+        { key: 'tip', label: 'Tip' },
+        { key: 'planlanan', label: 'Planlanan' },
+        { key: 'gerceklesen', label: 'Gerçekleşen' },
+        { key: 'sapma', label: 'Sapma' },
+        { key: 'sapma_yuzde', label: 'Sapma (%)' },
+      ],
+      data,
+    );
+    const monthSuffix = this.selectedMonth() === 'ALL' ? 'yillik' : `ay${this.selectedMonth()}`;
+    this.excel.download(blob, `butce_performans_${this.selectedYear()}_${monthSuffix}.xlsx`);
   }
 }

@@ -15,6 +15,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { CurrencyTryPipe } from '../../../shared/pipes/currency-try.pipe';
 import { TenantService } from '../../../core/services/tenant.service';
 import { ReportsService, ExpenseSliceRow } from '../reports.service';
+import { ExcelService } from '../../../core/services/excel.service';
 
 Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
 
@@ -35,6 +36,7 @@ const PALETTE = [
 export class ExpenseBreakdownComponent {
   private tenantService = inject(TenantService);
   private reportsService = inject(ReportsService);
+  private excel = inject(ExcelService);
 
   activeFirm = this.tenantService.activeFirm;
   loading = signal(false);
@@ -103,5 +105,25 @@ export class ExpenseBreakdownComponent {
 
   colorFor(idx: number): string {
     return PALETTE[idx % PALETTE.length];
+  }
+
+  exportExcel(): void {
+    const data = this.slices().map(s => ({
+      kod: s.code,
+      hesap: s.name,
+      tutar: s.amount,
+      yuzde: Number(s.percent.toFixed(2)),
+    }));
+    const blob = this.excel.exportTable(
+      'Gider Dağılımı',
+      [
+        { key: 'kod', label: 'Kod' },
+        { key: 'hesap', label: 'Hesap' },
+        { key: 'tutar', label: 'Tutar' },
+        { key: 'yuzde', label: 'Yüzde (%)' },
+      ],
+      data,
+    );
+    this.excel.download(blob, `gider_dagilimi_${this.selectedYear()}.xlsx`);
   }
 }
