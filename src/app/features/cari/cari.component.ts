@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormGroup } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
@@ -15,6 +16,7 @@ import { CurrencyTryPipe } from '../../shared/pipes/currency-try.pipe';
 import { TurkishDatePipe } from '../../shared/pipes/turkish-date.pipe';
 import { TenantService } from '../../core/services/tenant.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { ExcelService, CARI_SCHEMA } from '../../core/services/excel.service';
 import { CariService, CariAccountWithBalance, CariReportRow } from './cari.service';
 import { CariAccount, CariType } from '../../core/models/cari-account.model';
 import { Transaction } from '../../core/models/transaction.model';
@@ -48,6 +50,7 @@ const TURKISH_MONTHS = [
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    RouterLink,
     PageHeaderComponent,
     ConfirmDialogComponent,
     CurrencyTryPipe,
@@ -60,6 +63,7 @@ export class CariComponent implements OnInit {
   private tenantService = inject(TenantService);
   private notificationService = inject(NotificationService);
   private cariService = inject(CariService);
+  private excelService = inject(ExcelService);
   private fb = inject(FormBuilder);
 
   // Firm
@@ -212,6 +216,29 @@ export class CariComponent implements OnInit {
       is_active: true,
     });
     this.view.set('form');
+  }
+
+  exportCari(): void {
+    const rows = this.cariAccounts().map(c => ({
+      id: c.id,
+      type: c.type,
+      name: c.name,
+      tax_no: c.tax_no ?? '',
+      phone: c.phone ?? '',
+      email: c.email ?? '',
+      address: c.address ?? '',
+      payment_term_days: c.payment_term_days,
+    }));
+    const schemaWithId = {
+      ...CARI_SCHEMA,
+      columns: [
+        { key: 'id', label: 'UUID', type: 'uuid' as const, required: false, description: 'Sistem ID — ödemeler import edilirken cari_id olarak kullanılır' },
+        ...CARI_SCHEMA.columns,
+      ],
+    };
+    const blob = this.excelService.exportRows(schemaWithId, rows);
+    const today = new Date().toISOString().split('T')[0];
+    this.excelService.download(blob, `cari_hesaplar_${today}.xlsx`);
   }
 
   openEdit(account: CariAccountWithBalance, event: Event): void {

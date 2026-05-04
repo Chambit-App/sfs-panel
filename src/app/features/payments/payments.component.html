@@ -32,6 +32,17 @@
 @if (activeTab() === 'list') {
   <div class="payments-panel">
 
+    <div class="payments-list-header">
+      <button class="btn btn--ghost" (click)="exportTransactions()" [disabled]="filteredTransactions().length === 0">
+        <span class="material-icons">download</span>
+        Excel İndir
+      </button>
+      <a class="btn btn--ghost" routerLink="/payments/import">
+        <span class="material-icons">upload_file</span>
+        Excel'den Yükle
+      </a>
+    </div>
+
     <!-- Filters -->
     <div class="filter-bar">
       <div class="filter-bar__group">

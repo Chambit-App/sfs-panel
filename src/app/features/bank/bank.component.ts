@@ -8,8 +8,10 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { TenantService } from '../../core/services/tenant.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { ExcelService, BANK_SCHEMA } from '../../core/services/excel.service';
 import { BankService, BankAccountWithBalance, BankTransferWithNames } from './bank.service';
 import { BankAccount, BankTransfer } from '../../core/models/bank-account.model';
 import { Transaction } from '../../core/models/transaction.model';
@@ -45,6 +47,7 @@ interface TransferFormData {
   imports: [
     CommonModule,
     FormsModule,
+    RouterLink,
     PageHeaderComponent,
     KpiCardComponent,
     ConfirmDialogComponent,
@@ -59,6 +62,7 @@ export class BankComponent implements OnInit {
   private tenantService = inject(TenantService);
   private bankService = inject(BankService);
   private notificationService = inject(NotificationService);
+  private excelService = inject(ExcelService);
 
   // State
   activeTab = signal<ActiveTab>('accounts');
@@ -213,6 +217,26 @@ export class BankComponent implements OnInit {
     });
     this.ibanError.set('');
     this.panelMode.set('accountForm');
+  }
+
+  exportAccounts(): void {
+    const rows = this.accounts().map(a => ({
+      id: a.id,
+      bank_name: a.bank_name,
+      account_no: a.account_no,
+      iban: a.iban ?? '',
+      currency: a.currency,
+    }));
+    const schemaWithId = {
+      ...BANK_SCHEMA,
+      columns: [
+        { key: 'id', label: 'UUID', type: 'uuid' as const, required: false, description: 'Sistem ID — import için kopyalanabilir' },
+        ...BANK_SCHEMA.columns,
+      ],
+    };
+    const blob = this.excelService.exportRows(schemaWithId, rows);
+    const today = new Date().toISOString().split('T')[0];
+    this.excelService.download(blob, `banka_hesaplari_${today}.xlsx`);
   }
 
   openEditAccount(account: BankAccountWithBalance): void {

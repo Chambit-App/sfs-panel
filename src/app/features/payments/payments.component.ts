@@ -8,12 +8,14 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { CurrencyTryPipe } from '../../shared/pipes/currency-try.pipe';
 import { TurkishDatePipe } from '../../shared/pipes/turkish-date.pipe';
 import { TenantService } from '../../core/services/tenant.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { ExcelService, PAYMENTS_SCHEMA } from '../../core/services/excel.service';
 import { PaymentsService, CategoryItem, DailyCashFlow } from './payments.service';
 import { Transaction, TransactionType, TransactionStatus } from '../../core/models/transaction.model';
 import { CariAccount } from '../../core/models/cari-account.model';
@@ -41,6 +43,7 @@ const TURKISH_MONTHS = [
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    RouterLink,
     PageHeaderComponent,
     ConfirmDialogComponent,
     CurrencyTryPipe,
@@ -54,6 +57,7 @@ export class PaymentsComponent implements OnInit {
   private tenantService = inject(TenantService);
   private notificationService = inject(NotificationService);
   private paymentsService = inject(PaymentsService);
+  private excelService = inject(ExcelService);
 
   // ─── Tab State ───────────────────────────────────────────────────────────────
   activeTab = signal<TabId>('list');
@@ -210,6 +214,41 @@ export class PaymentsComponent implements OnInit {
     if (tab === 'calendar') {
       this.loadCashFlow();
     }
+  }
+
+  exportTransactions(): void {
+    const rows = this.filteredTransactions().map(t => ({
+      id: t.id,
+      type: t.type,
+      cari_id: t.cari_id,
+      cari_adi: t.cari_name ?? '',
+      category_id: t.category_id ?? '',
+      kategori_adi: t.category_name ?? '',
+      bank_id: t.bank_id ?? '',
+      banka_adi: t.bank_name ?? '',
+      invoice_no: t.invoice_no ?? '',
+      invoice_date: t.invoice_date,
+      due_date: t.due_date,
+      payment_term_days: t.payment_term_days,
+      amount: t.amount,
+      status: t.status,
+      description: t.description ?? '',
+    }));
+    const schemaWithIds = {
+      ...PAYMENTS_SCHEMA,
+      columns: [
+        { key: 'id', label: 'UUID', type: 'uuid' as const, required: false, description: 'Sistem ID (sadece bilgi amaçlı)' },
+        ...PAYMENTS_SCHEMA.columns.flatMap(c => {
+          if (c.key === 'cari_id') return [c, { key: 'cari_adi', label: 'Cari Adı (bilgi)', type: 'text' as const, required: false }];
+          if (c.key === 'category_id') return [c, { key: 'kategori_adi', label: 'Kategori Adı (bilgi)', type: 'text' as const, required: false }];
+          if (c.key === 'bank_id') return [c, { key: 'banka_adi', label: 'Banka Adı (bilgi)', type: 'text' as const, required: false }];
+          return [c];
+        }),
+      ],
+    };
+    const blob = this.excelService.exportRows(schemaWithIds, rows);
+    const today = new Date().toISOString().split('T')[0];
+    this.excelService.download(blob, `odemeler_${today}.xlsx`);
   }
 
   // ─── List Tab Methods ─────────────────────────────────────────────────────────
