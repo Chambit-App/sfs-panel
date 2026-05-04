@@ -1,0 +1,101 @@
+<app-page-header
+  title="Top Müşteri / Tedarikçi"
+  [subtitle]="(activeFirm()?.name ?? 'Firma seçilmedi') + ' • ' + selectedYear()"
+/>
+
+@if (!activeFirm()) {
+  <div class="tc__empty">
+    <span class="material-icons">business</span>
+    <p>Devam etmek için üst menüden bir firma seçin.</p>
+  </div>
+} @else {
+  <div class="tc__toolbar">
+    <div class="tc__control">
+      <label>Yıl</label>
+      <select [ngModel]="selectedYear()" (ngModelChange)="onYearChange($event)">
+        @for (y of yearOptions; track y) { <option [value]="y">{{ y }}</option> }
+      </select>
+    </div>
+    <button
+      type="button"
+      class="tc__export"
+      (click)="exportExcel()"
+      [disabled]="musteri().length === 0 && tedarikci().length === 0"
+    >
+      <span class="material-icons">download</span>
+      Excel İndir
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="tc__loading"><span class="material-icons spin">refresh</span> Yükleniyor…</div>
+  } @else {
+    <div class="tc__grid">
+      <!-- Müşteri kolonu -->
+      <section class="tc__card">
+        <header class="tc__card-header tc__card-header--m">
+          <span class="material-icons">people</span>
+          <h3>Top Müşteri (Gelir)</h3>
+          <span class="tc__total">{{ musteriTotal() | currencyTry }}</span>
+        </header>
+        @if (musteri().length === 0) {
+          <div class="tc__inline-empty">Bu yıl için müşteri tahsilatı yok.</div>
+        } @else {
+          <ol class="tc__list">
+            @for (c of musteri(); track c.cari_id; let i = $index) {
+              <li class="tc__row">
+                <span class="tc__rank">{{ i + 1 }}</span>
+                <div class="tc__row-main">
+                  <div class="tc__row-line">
+                    <span class="tc__name">{{ c.cari_name }}</span>
+                    <span class="tc__amount">{{ c.total_amount | currencyTry }}</span>
+                  </div>
+                  <div class="tc__bar-track">
+                    <div class="tc__bar tc__bar--m" [style.width.%]="pctOf(c.total_amount, musteriTotal())"></div>
+                  </div>
+                  <div class="tc__meta">
+                    <span>{{ c.transaction_count }} işlem</span>
+                    <span>%{{ pctOf(c.total_amount, musteriTotal()).toFixed(1) }}</span>
+                  </div>
+                </div>
+              </li>
+            }
+          </ol>
+        }
+      </section>
+
+      <!-- Tedarikçi kolonu -->
+      <section class="tc__card">
+        <header class="tc__card-header tc__card-header--t">
+          <span class="material-icons">inventory_2</span>
+          <h3>Top Tedarikçi (Gider)</h3>
+          <span class="tc__total">{{ tedarikciTotal() | currencyTry }}</span>
+        </header>
+        @if (tedarikci().length === 0) {
+          <div class="tc__inline-empty">Bu yıl için tedarikçi ödemesi yok.</div>
+        } @else {
+          <ol class="tc__list">
+            @for (c of tedarikci(); track c.cari_id; let i = $index) {
+              <li class="tc__row">
+                <span class="tc__rank">{{ i + 1 }}</span>
+                <div class="tc__row-main">
+                  <div class="tc__row-line">
+                    <span class="tc__name">{{ c.cari_name }}</span>
+                    <span class="tc__amount">{{ c.total_amount | currencyTry }}</span>
+                  </div>
+                  <div class="tc__bar-track">
+                    <div class="tc__bar tc__bar--t" [style.width.%]="pctOf(c.total_amount, tedarikciTotal())"></div>
+                  </div>
+                  <div class="tc__meta">
+                    <span>{{ c.transaction_count }} işlem</span>
+                    <span>%{{ pctOf(c.total_amount, tedarikciTotal()).toFixed(1) }}</span>
+                  </div>
+                </div>
+              </li>
+            }
+          </ol>
+        }
+      </section>
+    </div>
+  }
+}

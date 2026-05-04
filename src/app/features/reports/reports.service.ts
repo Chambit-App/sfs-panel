@@ -98,6 +98,32 @@ export interface OverdueRow {
   cari_type: 'MUSTERI' | 'TEDARIKCI';
 }
 
+// ── Top cari row (per type) ──────────────────────────────────────────────────
+export interface TopCariRow {
+  cari_id: string;
+  cari_name: string;
+  cari_type: 'MUSTERI' | 'TEDARIKCI';
+  total_amount: number;
+  transaction_count: number;
+}
+
+// ── Rolling trend month ──────────────────────────────────────────────────────
+export interface TrendMonth {
+  year: number;
+  month: number;
+  label: string;       // e.g. "Mayıs 2026"
+  gelir: number;
+  gider: number;
+  net: number;
+}
+
+// ── Bank balance trend ───────────────────────────────────────────────────────
+export interface BankTrendRow {
+  bank_id: string;
+  bank_name: string;
+  monthly: number[];    // 12 entries, cumulative balance at end of each month
+}
+
 @Injectable({ providedIn: 'root' })
 export class ReportsService {
   private supabaseService = inject(SupabaseService);
@@ -439,5 +465,210 @@ export class ReportsService {
     }
 
     return Object.values(monthMap);
+  }
+
+  // ── Public: Top cariler (per type) ─────────────────────────────────────────
+  async getTopCariler(firmId: string, year: number, limit = 10): Promise<{
+    musteri: TopCariRow[];
+    tedarikci: TopCariRow[];
+  }> {
+    const startDate = `${year}-01-01`;
+    const endDate = `${year}-12-31`;
+
+    const { data, error } = await this.client
+      .from('transactions')
+      .select('cari_id, type, amount, cari_accounts!inner(name, type, firm_id)')
+      .eq('firm_id', firmId)
+      .neq('status', 'IPTAL')
+      .gte('invoice_date', startDate)
+      .lte('invoice_date', endDate);
+
+    if (error) {
+      console.error('Error fetching top cariler:', error);
+      return { musteri: [], tedarikci: [] };
+    }
+
+    const map = new Map<string, TopCariRow>();
+    for (const row of (data as unknown as Array<Record<string, unknown>> ?? [])) {
+      const cariRaw = row['cari_accounts'];
+      const cari = (Array.isArray(cariRaw) ? cariRaw[0] : cariRaw) as
+        | { name: string; type: 'MUSTERI' | 'TEDARIKCI' }
+        | null;
+      if (!cari) continue;
+
+      const cariId = row['cari_id'] as string;
+      const txnType = row['type'] as 'GELIR' | 'GIDER';
+      const amount = Number(row['amount']) || 0;
+
+      // Müşteri için sadece GELIR; Tedarikçi için sadece GIDER
+      if (cari.type === 'MUSTERI' && txnType !== 'GELIR') continue;
+      if (cari.type === 'TEDARIKCI' && txnType !== 'GIDER') continue;
+
+      let entry = map.get(cariId);
+      if (!entry) {
+        entry = {
+          cari_id: cariId,
+          cari_name: cari.name,
+          cari_type: cari.type,
+          total_amount: 0,
+          transaction_count: 0,
+        };
+        map.set(cariId, entry);
+      }
+      entry.total_amount += amount;
+      entry.transaction_count += 1;
+    }
+
+    const all = [...map.values()];
+    const musteri = all
+      .filter(c => c.cari_type === 'MUSTERI')
+      .sort((a, b) => b.total_amount - a.total_amount)
+      .slice(0, limit);
+    const tedarikci = all
+      .filter(c => c.cari_type === 'TEDARIKCI')
+      .sort((a, b) => b.total_amount - a.total_amount)
+      .slice(0, limit);
+
+    return { musteri, tedarikci };
+  }
+
+  // ── Public: Rolling trend (last N months) ──────────────────────────────────
+  async getRollingTrend(firmId: string, months = 12): Promise<TrendMonth[]> {
+    const today = new Date();
+    const result: TrendMonth[] = [];
+    const monthLabels = [
+      'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık',
+    ];
+
+    // Build empty buckets for the last `months` months
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      result.push({
+        year: d.getFullYear(),
+        month: d.getMonth() + 1,
+        label: `${monthLabels[d.getMonth()]} ${d.getFullYear()}`,
+        gelir: 0,
+        gider: 0,
+        net: 0,
+      });
+    }
+
+    const startDate = `${result[0].year}-${String(result[0].month).padStart(2, '0')}-01`;
+    const lastBucket = result[result.length - 1];
+    const lastDay = new Date(lastBucket.year, lastBucket.month, 0).getDate();
+    const endDate = `${lastBucket.year}-${String(lastBucket.month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+    const { data, error } = await this.client
+      .from('transactions')
+      .select('type, amount, invoice_date')
+      .eq('firm_id', firmId)
+      .neq('status', 'IPTAL')
+      .gte('invoice_date', startDate)
+      .lte('invoice_date', endDate);
+
+    if (error) {
+      console.error('Error fetching rolling trend:', error);
+      return result;
+    }
+
+    for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+      const date = new Date(row['invoice_date'] as string);
+      const bucket = result.find(
+        b => b.year === date.getFullYear() && b.month === date.getMonth() + 1,
+      );
+      if (!bucket) continue;
+      const amount = Number(row['amount']) || 0;
+      if (row['type'] === 'GELIR') bucket.gelir += amount;
+      else if (row['type'] === 'GIDER') bucket.gider += amount;
+    }
+
+    for (const b of result) b.net = b.gelir - b.gider;
+    return result;
+  }
+
+  // ── Public: Bank balance trend (12 monthly cumulative balances) ────────────
+  async getBankBalanceTrend(firmId: string, year: number): Promise<BankTrendRow[]> {
+    // Fetch all banks
+    const { data: banksData, error: bankErr } = await this.client
+      .from('bank_accounts')
+      .select('id, bank_name')
+      .eq('firm_id', firmId)
+      .eq('is_active', true)
+      .order('bank_name');
+    if (bankErr) {
+      console.error('Error fetching banks:', bankErr);
+      return [];
+    }
+    const banks = (banksData ?? []) as Array<{ id: string; bank_name: string }>;
+    if (banks.length === 0) return [];
+
+    // Fetch all paid transactions up to end of `year` (cumulative requires history)
+    const endOfYear = `${year}-12-31`;
+    const { data: txnData } = await this.client
+      .from('transactions')
+      .select('bank_id, type, amount, invoice_date, status')
+      .eq('firm_id', firmId)
+      .eq('status', 'ODENDI')
+      .lte('invoice_date', endOfYear)
+      .not('bank_id', 'is', null);
+
+    const { data: trData } = await this.client
+      .from('bank_transfers')
+      .select('from_bank_id, to_bank_id, amount, transfer_date')
+      .eq('firm_id', firmId)
+      .lte('transfer_date', endOfYear);
+
+    const result: BankTrendRow[] = banks.map(b => ({
+      bank_id: b.id,
+      bank_name: b.bank_name,
+      monthly: Array(12).fill(0),
+    }));
+
+    // Compute month-by-month delta then cumulative
+    // Each bank: an array of 12 deltas (Jan..Dec of `year`), plus prior balance from earlier years
+    const bankIndex = new Map(result.map((r, i) => [r.bank_id, i]));
+    const priorBalances = new Map<string, number>(banks.map(b => [b.id, 0]));
+    const monthlyDeltas: Map<string, number[]> = new Map(
+      banks.map(b => [b.id, Array(12).fill(0)]),
+    );
+
+    const applyTxn = (bankId: string, amount: number, date: Date) => {
+      if (date.getFullYear() < year) {
+        priorBalances.set(bankId, (priorBalances.get(bankId) ?? 0) + amount);
+      } else if (date.getFullYear() === year) {
+        const m = date.getMonth();
+        const arr = monthlyDeltas.get(bankId);
+        if (arr) arr[m] += amount;
+      }
+    };
+
+    for (const t of (txnData ?? []) as Array<Record<string, unknown>>) {
+      const bankId = t['bank_id'] as string;
+      if (!bankId || !bankIndex.has(bankId)) continue;
+      const amount = Number(t['amount']) || 0;
+      const sign = t['type'] === 'GELIR' ? 1 : -1;
+      applyTxn(bankId, sign * amount, new Date(t['invoice_date'] as string));
+    }
+
+    for (const tr of (trData ?? []) as Array<Record<string, unknown>>) {
+      const fromId = tr['from_bank_id'] as string;
+      const toId = tr['to_bank_id'] as string;
+      const amount = Number(tr['amount']) || 0;
+      const d = new Date(tr['transfer_date'] as string);
+      if (fromId && bankIndex.has(fromId)) applyTxn(fromId, -amount, d);
+      if (toId && bankIndex.has(toId)) applyTxn(toId, amount, d);
+    }
+
+    for (const r of result) {
+      const deltas = monthlyDeltas.get(r.bank_id) ?? Array(12).fill(0);
+      let running = priorBalances.get(r.bank_id) ?? 0;
+      for (let m = 0; m < 12; m++) {
+        running += deltas[m];
+        r.monthly[m] = running;
+      }
+    }
+
+    return result;
   }
 }
