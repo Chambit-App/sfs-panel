@@ -10,7 +10,7 @@
     </button>
   </div>
 
-  <!-- Nav groups -->
+  <!-- Nav -->
   <div class="sidebar__nav-container">
     @for (group of navGroups(); track group.groupLabel) {
       <div class="sidebar__group">
@@ -37,6 +37,115 @@
           }
         </ul>
       </div>
+
+      <!-- Inject the Reports collapsible section after Planlama -->
+      @if (group.groupLabel === 'Planlama') {
+        <div class="sidebar__group sidebar__reports">
+          @if (collapsed()) {
+            <ul class="sidebar__nav">
+              <li class="sidebar__nav-item">
+                <a
+                  routerLink="/reports"
+                  [routerLinkActiveOptions]="{ exact: false }"
+                  routerLinkActive="sidebar__nav-link--active"
+                  class="sidebar__nav-link"
+                  title="Raporlar"
+                  (click)="onNavClick()"
+                >
+                  <span class="sidebar__nav-icon material-icons">bar_chart</span>
+                </a>
+              </li>
+            </ul>
+          } @else {
+            <button
+              class="sidebar__reports-header"
+              (click)="toggleReports()"
+              type="button"
+              [attr.aria-expanded]="reportsExpanded()"
+            >
+              <span class="material-icons sidebar__reports-icon">bar_chart</span>
+              <span class="sidebar__reports-label">Raporlar</span>
+              <span class="material-icons sidebar__reports-chevron">
+                {{ reportsExpanded() ? 'expand_less' : 'expand_more' }}
+              </span>
+            </button>
+
+            @if (reportsExpanded()) {
+              <div class="sidebar__reports-body">
+                <!-- Inline firm picker -->
+                <div class="sidebar__firm-picker">
+                  <button
+                    type="button"
+                    class="sidebar__firm-button"
+                    (click)="toggleFirmDropdown($event)"
+                  >
+                    <span class="material-icons sidebar__firm-icon">business</span>
+                    <span class="sidebar__firm-name">
+                      {{ tenantService.activeFirm()?.name ?? 'Firma seçin' }}
+                    </span>
+                    <span class="material-icons sidebar__firm-chevron">expand_more</span>
+                  </button>
+                  @if (firmDropdownOpen()) {
+                    <div class="sidebar__firm-menu">
+                      @for (firm of tenantService.firms(); track firm.id) {
+                        <button
+                          type="button"
+                          class="sidebar__firm-option"
+                          [class.sidebar__firm-option--active]="tenantService.activeFirm()?.id === firm.id"
+                          (click)="selectFirm(firm)"
+                        >
+                          {{ firm.name }}
+                          @if (tenantService.activeFirm()?.id === firm.id) {
+                            <span class="material-icons">check</span>
+                          }
+                        </button>
+                      }
+                      @if (tenantService.firms().length === 0) {
+                        <div class="sidebar__firm-empty">Firma bulunamadı</div>
+                      }
+                    </div>
+                  }
+                </div>
+
+                <!-- Konsolide (tenant-level) -->
+                <ul class="sidebar__nav">
+                  <li class="sidebar__nav-item">
+                    <a
+                      [routerLink]="consolidatedItem.path"
+                      routerLinkActive="sidebar__nav-link--active"
+                      class="sidebar__nav-link"
+                      (click)="onNavClick()"
+                    >
+                      <span class="sidebar__nav-icon material-icons">{{ consolidatedItem.icon }}</span>
+                      <span class="sidebar__nav-label">{{ consolidatedItem.label }}</span>
+                    </a>
+                  </li>
+                </ul>
+
+                <!-- Sub-header for firm-scoped reports -->
+                <span class="sidebar__sub-label">Firma Raporları</span>
+
+                <ul class="sidebar__nav">
+                  @for (item of reportItems; track item.path) {
+                    <li class="sidebar__nav-item">
+                      <a
+                        [routerLink]="item.path"
+                        routerLinkActive="sidebar__nav-link--active"
+                        [routerLinkActiveOptions]="item.exact ? { exact: true } : { exact: false }"
+                        class="sidebar__nav-link"
+                        (click)="onNavClick()"
+                      >
+                        <span class="sidebar__nav-icon material-icons">{{ item.icon }}</span>
+                        <span class="sidebar__nav-label">{{ item.label }}</span>
+                      </a>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+          }
+        </div>
+      }
     }
   </div>
 
