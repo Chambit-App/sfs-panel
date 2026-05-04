@@ -44,6 +44,8 @@ export class SidebarComponent {
     { label: 'Gider Dağılımı', path: '/reports/expense-breakdown', icon: 'pie_chart' },
     { label: 'Top Müşteri/Tedarikçi', path: '/reports/top-cari', icon: 'leaderboard' },
     { label: 'Banka Bakiye Trendi', path: '/reports/bank-trend', icon: 'show_chart' },
+    { label: 'Banka Hareketleri', path: '/reports/bank-statement', icon: 'receipt_long' },
+    { label: 'DSO / DPO', path: '/reports/dso-dpo', icon: 'speed' },
     { label: 'Geciken İşlemler', path: '/reports/overdue', icon: 'warning' },
   ];
 

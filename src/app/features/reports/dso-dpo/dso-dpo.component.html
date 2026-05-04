@@ -1,0 +1,110 @@
+<app-page-header
+  title="Tahsilat & Ödeme Süresi (DSO / DPO)"
+  [subtitle]="(activeFirm()?.name ?? 'Firma seçilmedi') + ' • Son ' + windowMonths() + ' ay'"
+/>
+
+@if (!activeFirm()) {
+  <div class="dd__empty">
+    <span class="material-icons">business</span>
+    <p>Devam etmek için üst menüden bir firma seçin.</p>
+  </div>
+} @else {
+  <div class="dd__toolbar">
+    <div class="dd__control">
+      <label>Pencere</label>
+      <select [ngModel]="windowMonths()" (ngModelChange)="onWindowChange($event)">
+        @for (m of windowOptions; track m) { <option [value]="m">Son {{ m }} ay</option> }
+      </select>
+    </div>
+    <button
+      type="button"
+      class="dd__export"
+      (click)="exportExcel()"
+      [disabled]="data().length === 0"
+    >
+      <span class="material-icons">download</span>
+      Excel İndir
+    </button>
+    <p class="dd__hint">
+      <span class="material-icons">info</span>
+      <span>
+        <strong>DSO</strong>: Müşteriden tahsilatın ortalama gün cinsinden gerçekleşme süresi.
+        <strong>DPO</strong>: Tedarikçiye ödemenin ortalama gerçekleşme süresi.
+        Düşük DSO + yüksek DPO = sağlıklı nakit akışı.
+      </span>
+    </p>
+  </div>
+
+  @if (loading()) {
+    <div class="dd__loading"><span class="material-icons spin">refresh</span> Yükleniyor…</div>
+  } @else {
+    <div class="dd__kpis">
+      <div class="dd__kpi dd__kpi--dso">
+        <span>Ort. DSO</span>
+        <strong>
+          @if (averages().avgDso !== null) {
+            {{ averages().avgDso!.toFixed(1) }} <small>gün</small>
+          } @else {
+            —
+          }
+        </strong>
+      </div>
+      <div class="dd__kpi dd__kpi--dpo">
+        <span>Ort. DPO</span>
+        <strong>
+          @if (averages().avgDpo !== null) {
+            {{ averages().avgDpo!.toFixed(1) }} <small>gün</small>
+          } @else {
+            —
+          }
+        </strong>
+      </div>
+      <div class="dd__kpi" [class.good]="(averages().gap ?? 1) <= 0" [class.bad]="(averages().gap ?? 0) > 0">
+        <span>DSO − DPO</span>
+        <strong>
+          @if (averages().gap !== null) {
+            {{ averages().gap!.toFixed(1) }} <small>gün</small>
+          } @else {
+            —
+          }
+        </strong>
+        <small>Pozitif değer: paranı geç tahsil edip erken ödüyorsun</small>
+      </div>
+    </div>
+
+    <div class="dd__card">
+      <div class="dd__chart-wrap">
+        <canvas baseChart
+          [data]="chartData()"
+          [options]="chartOptions"
+          type="line">
+        </canvas>
+      </div>
+    </div>
+
+    <div class="dd__table-wrapper">
+      <table class="dd__table">
+        <thead>
+          <tr>
+            <th>Ay</th>
+            <th class="num">DSO (gün)</th>
+            <th class="num">DPO (gün)</th>
+            <th class="num">Tahsilat Adedi</th>
+            <th class="num">Ödeme Adedi</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of data(); track m.label) {
+            <tr>
+              <td>{{ m.label }}</td>
+              <td class="num">{{ m.dso !== null ? m.dso.toFixed(1) : '—' }}</td>
+              <td class="num">{{ m.dpo !== null ? m.dpo.toFixed(1) : '—' }}</td>
+              <td class="num muted">{{ m.receivableCount }}</td>
+              <td class="num muted">{{ m.payableCount }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}

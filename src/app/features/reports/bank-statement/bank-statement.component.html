@@ -1,0 +1,122 @@
+<app-page-header
+  title="Banka Hesap Hareketleri"
+  [subtitle]="(activeFirm()?.name ?? 'Firma seçilmedi') + (selectedBankName() ? ' • ' + selectedBankName() : '')"
+/>
+
+@if (!activeFirm()) {
+  <div class="bs__empty">
+    <span class="material-icons">business</span>
+    <p>Devam etmek için üst menüden bir firma seçin.</p>
+  </div>
+} @else {
+  <div class="bs__toolbar">
+    <div class="bs__control">
+      <label>Banka</label>
+      <select [ngModel]="selectedBankId()" (ngModelChange)="onBankChange($event)">
+        @for (b of banks(); track b.id) {
+          <option [value]="b.id">{{ b.bank_name }}</option>
+        }
+      </select>
+    </div>
+    <div class="bs__control">
+      <label>Başlangıç</label>
+      <input type="date" [ngModel]="fromDate()" (ngModelChange)="onFromChange($event)" />
+    </div>
+    <div class="bs__control">
+      <label>Bitiş</label>
+      <input type="date" [ngModel]="toDate()" (ngModelChange)="onToChange($event)" />
+    </div>
+    <button
+      type="button"
+      class="bs__export"
+      (click)="exportExcel()"
+      [disabled]="entries().length === 0"
+    >
+      <span class="material-icons">download</span>
+      Excel İndir
+    </button>
+  </div>
+
+  @if (banks().length === 0) {
+    <div class="bs__empty">
+      <span class="material-icons">account_balance</span>
+      <p>Aktif banka hesabı bulunamadı.</p>
+    </div>
+  } @else if (loading()) {
+    <div class="bs__loading"><span class="material-icons spin">refresh</span> Yükleniyor…</div>
+  } @else {
+    <!-- KPI cards -->
+    <div class="bs__kpis">
+      <div class="bs__kpi">
+        <span>Açılış Bakiye</span>
+        <strong>{{ openingBalance() | currencyTry }}</strong>
+        <small>{{ fromDate() | turkishDate }}</small>
+      </div>
+      <div class="bs__kpi bs__kpi--g">
+        <span>Toplam Giren</span>
+        <strong>{{ totalsIn() | currencyTry }}</strong>
+      </div>
+      <div class="bs__kpi bs__kpi--r">
+        <span>Toplam Çıkan</span>
+        <strong>{{ totalsOut() | currencyTry }}</strong>
+      </div>
+      <div class="bs__kpi" [class.bs__kpi--g]="netChange() >= 0" [class.bs__kpi--r]="netChange() < 0">
+        <span>Net Değişim</span>
+        <strong>{{ netChange() | currencyTry }}</strong>
+      </div>
+      <div class="bs__kpi bs__kpi--accent">
+        <span>Kapanış Bakiye</span>
+        <strong>{{ closingBalance() | currencyTry }}</strong>
+        <small>{{ toDate() | turkishDate }}</small>
+      </div>
+    </div>
+
+    @if (entries().length === 0) {
+      <div class="bs__empty">
+        <span class="material-icons">receipt_long</span>
+        <p>Bu aralık için hareket bulunamadı.</p>
+      </div>
+    } @else {
+      <div class="bs__table-wrapper">
+        <table class="bs__table">
+          <thead>
+            <tr>
+              <th>Tarih</th>
+              <th>İşlem</th>
+              <th>Cari / Karşı Banka</th>
+              <th>Fatura No</th>
+              <th>Açıklama</th>
+              <th class="num">Giren</th>
+              <th class="num">Çıkan</th>
+              <th class="num">Bakiye</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="bs__opening">
+              <td colspan="7">Açılış Bakiyesi</td>
+              <td class="num"><strong>{{ openingBalance() | currencyTry }}</strong></td>
+            </tr>
+            @for (e of entries(); track $index) {
+              <tr>
+                <td>{{ e.date | turkishDate }}</td>
+                <td><span [class]="kindClass(e.kind)">{{ kindLabel(e.kind) }}</span></td>
+                <td>{{ e.cari_name }}</td>
+                <td><code>{{ e.invoice_no || '—' }}</code></td>
+                <td class="muted">{{ e.description || '—' }}</td>
+                <td class="num pos">{{ e.amount > 0 ? (e.amount | currencyTry) : '—' }}</td>
+                <td class="num neg">{{ e.amount < 0 ? (e.amount * -1 | currencyTry) : '—' }}</td>
+                <td class="num bs__balance" [class.neg]="e.running_balance < 0">
+                  {{ e.running_balance | currencyTry }}
+                </td>
+              </tr>
+            }
+            <tr class="bs__closing">
+              <td colspan="7">Kapanış Bakiyesi</td>
+              <td class="num"><strong>{{ closingBalance() | currencyTry }}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+}

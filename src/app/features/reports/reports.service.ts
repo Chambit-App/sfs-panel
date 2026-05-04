@@ -137,6 +137,28 @@ export interface ScheduleRow {
 
 export type ScheduleStatusFilter = 'ALL_OPEN' | 'PENDING' | 'PAID';
 
+// ── Bank statement entry (single bank, chronological) ────────────────────────
+export interface BankStatementEntry {
+  date: string;             // ISO yyyy-mm-dd
+  kind: 'GELIR' | 'GIDER' | 'TRANSFER_IN' | 'TRANSFER_OUT';
+  description: string;
+  cari_name: string;        // counter-party for txns, other bank for transfers
+  invoice_no: string;
+  amount: number;           // positive for IN flows, negative for OUT
+  running_balance: number;
+}
+
+// ── DSO / DPO trend month ────────────────────────────────────────────────────
+export interface DsoDpoMonth {
+  year: number;
+  month: number;
+  label: string;
+  dso: number | null;       // average days from invoice → payment for GELIR
+  dpo: number | null;       // average days from invoice → payment for GIDER
+  receivableCount: number;
+  payableCount: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ReportsService {
   private supabaseService = inject(SupabaseService);
@@ -763,5 +785,210 @@ export class ReportsService {
       if (a.type !== b.type) return a.type === 'GELIR' ? -1 : 1;
       return a.code.localeCompare(b.code);
     });
+  }
+
+  // ── Public: Bank statement (chronological in/out per bank) ─────────────────
+  async getBankStatement(
+    firmId: string,
+    bankId: string,
+    fromDate: string,
+    toDate: string,
+  ): Promise<BankStatementEntry[]> {
+    // Pull all paid transactions on this bank in window
+    const { data: txnData } = await this.client
+      .from('transactions')
+      .select('type, amount, invoice_date, invoice_no, description, cari_accounts(name)')
+      .eq('firm_id', firmId)
+      .eq('status', 'ODENDI')
+      .eq('bank_id', bankId)
+      .gte('invoice_date', fromDate)
+      .lte('invoice_date', toDate);
+
+    const { data: trData } = await this.client
+      .from('bank_transfers')
+      .select(
+        'amount, transfer_date, description, from_bank_id, to_bank_id, ' +
+          'from_bank:bank_accounts!from_bank_id(bank_name), ' +
+          'to_bank:bank_accounts!to_bank_id(bank_name)',
+      )
+      .eq('firm_id', firmId)
+      .gte('transfer_date', fromDate)
+      .lte('transfer_date', toDate)
+      .or(`from_bank_id.eq.${bankId},to_bank_id.eq.${bankId}`);
+
+    // Compute opening balance: everything before fromDate
+    const openingBalance = await this.computeOpeningBalance(firmId, bankId, fromDate);
+
+    const entries: BankStatementEntry[] = [];
+
+    for (const t of (txnData as unknown as Array<Record<string, unknown>> ?? [])) {
+      const cariRaw = t['cari_accounts'];
+      const cari = (Array.isArray(cariRaw) ? cariRaw[0] : cariRaw) as { name: string } | null;
+      const isIn = t['type'] === 'GELIR';
+      const amount = (Number(t['amount']) || 0) * (isIn ? 1 : -1);
+      entries.push({
+        date: t['invoice_date'] as string,
+        kind: isIn ? 'GELIR' : 'GIDER',
+        description: (t['description'] as string) ?? '',
+        cari_name: cari?.name ?? '—',
+        invoice_no: (t['invoice_no'] as string) ?? '',
+        amount,
+        running_balance: 0,
+      });
+    }
+
+    for (const tr of (trData as unknown as Array<Record<string, unknown>> ?? [])) {
+      const fromId = tr['from_bank_id'] as string;
+      const toId = tr['to_bank_id'] as string;
+      const fromBankRaw = tr['from_bank'];
+      const toBankRaw = tr['to_bank'];
+      const fromBank = (Array.isArray(fromBankRaw) ? fromBankRaw[0] : fromBankRaw) as
+        | { bank_name: string }
+        | null;
+      const toBank = (Array.isArray(toBankRaw) ? toBankRaw[0] : toBankRaw) as
+        | { bank_name: string }
+        | null;
+
+      const amount = Number(tr['amount']) || 0;
+      const isOut = fromId === bankId;
+      entries.push({
+        date: tr['transfer_date'] as string,
+        kind: isOut ? 'TRANSFER_OUT' : 'TRANSFER_IN',
+        description: (tr['description'] as string) ?? '',
+        cari_name: isOut ? `→ ${toBank?.bank_name ?? '—'}` : `← ${fromBank?.bank_name ?? '—'}`,
+        invoice_no: '',
+        amount: isOut ? -amount : amount,
+        running_balance: 0,
+      });
+    }
+
+    // Sort chronologically and compute running balance starting from opening
+    entries.sort((a, b) => a.date.localeCompare(b.date));
+    let running = openingBalance;
+    for (const e of entries) {
+      running += e.amount;
+      e.running_balance = running;
+    }
+
+    return entries;
+  }
+
+  /** Net balance up to (but not including) cutoff date for a bank. */
+  private async computeOpeningBalance(
+    firmId: string,
+    bankId: string,
+    cutoff: string,
+  ): Promise<number> {
+    const { data: txnData } = await this.client
+      .from('transactions')
+      .select('type, amount')
+      .eq('firm_id', firmId)
+      .eq('status', 'ODENDI')
+      .eq('bank_id', bankId)
+      .lt('invoice_date', cutoff);
+
+    const { data: trData } = await this.client
+      .from('bank_transfers')
+      .select('amount, from_bank_id, to_bank_id')
+      .eq('firm_id', firmId)
+      .lt('transfer_date', cutoff)
+      .or(`from_bank_id.eq.${bankId},to_bank_id.eq.${bankId}`);
+
+    let bal = 0;
+    for (const t of (txnData ?? []) as Array<Record<string, unknown>>) {
+      const a = Number(t['amount']) || 0;
+      bal += t['type'] === 'GELIR' ? a : -a;
+    }
+    for (const tr of (trData ?? []) as Array<Record<string, unknown>>) {
+      const a = Number(tr['amount']) || 0;
+      bal += (tr['to_bank_id'] === bankId ? a : 0) - (tr['from_bank_id'] === bankId ? a : 0);
+    }
+    return bal;
+  }
+
+  // ── Public: DSO / DPO trend (12 months) ────────────────────────────────────
+  async getDsoDpoTrend(firmId: string, months = 12): Promise<DsoDpoMonth[]> {
+    const today = new Date();
+    const result: DsoDpoMonth[] = [];
+    const monthLabels = [
+      'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık',
+    ];
+
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      result.push({
+        year: d.getFullYear(),
+        month: d.getMonth() + 1,
+        label: `${monthLabels[d.getMonth()]} ${d.getFullYear()}`,
+        dso: null,
+        dpo: null,
+        receivableCount: 0,
+        payableCount: 0,
+      });
+    }
+
+    const startDate = `${result[0].year}-${String(result[0].month).padStart(2, '0')}-01`;
+    const lastBucket = result[result.length - 1];
+    const lastDay = new Date(lastBucket.year, lastBucket.month, 0).getDate();
+    const endDate = `${lastBucket.year}-${String(lastBucket.month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+    // Use ODENDI transactions; "payment date" approximated as updated_at since
+    // the schema doesn't carry a separate paid_at column. invoice_date is the
+    // start of the credit window, due_date is the planned end.
+    const { data, error } = await this.client
+      .from('transactions')
+      .select('type, amount, invoice_date, due_date, updated_at, status')
+      .eq('firm_id', firmId)
+      .eq('status', 'ODENDI')
+      .gte('updated_at', startDate)
+      .lte('updated_at', endDate + 'T23:59:59');
+
+    if (error) {
+      console.error('Error fetching DSO/DPO data:', error);
+      return result;
+    }
+
+    // Per bucket: weighted average days = sum(amount * days) / sum(amount)
+    type Acc = { weightedDays: number; weight: number; count: number };
+    const dsoBuckets = new Map<string, Acc>();
+    const dpoBuckets = new Map<string, Acc>();
+
+    for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+      const paidDate = new Date(row['updated_at'] as string);
+      const invoiceDate = new Date(row['invoice_date'] as string);
+      const days = Math.max(
+        0,
+        Math.floor((paidDate.getTime() - invoiceDate.getTime()) / 86400000),
+      );
+      const amount = Number(row['amount']) || 0;
+      const key = `${paidDate.getFullYear()}-${paidDate.getMonth() + 1}`;
+
+      const target = row['type'] === 'GELIR' ? dsoBuckets : dpoBuckets;
+      let acc = target.get(key);
+      if (!acc) {
+        acc = { weightedDays: 0, weight: 0, count: 0 };
+        target.set(key, acc);
+      }
+      acc.weightedDays += days * amount;
+      acc.weight += amount;
+      acc.count += 1;
+    }
+
+    for (const r of result) {
+      const key = `${r.year}-${r.month}`;
+      const dso = dsoBuckets.get(key);
+      const dpo = dpoBuckets.get(key);
+      if (dso && dso.weight > 0) {
+        r.dso = Math.round((dso.weightedDays / dso.weight) * 10) / 10;
+        r.receivableCount = dso.count;
+      }
+      if (dpo && dpo.weight > 0) {
+        r.dpo = Math.round((dpo.weightedDays / dpo.weight) * 10) / 10;
+        r.payableCount = dpo.count;
+      }
+    }
+
+    return result;
   }
 }
