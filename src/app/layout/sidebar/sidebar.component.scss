@@ -225,3 +225,165 @@
     text-overflow: ellipsis;
   }
 }
+
+// ─── Reports collapsible section ────────────────────────────────────────────
+.sidebar__reports {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar__reports-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: transparent;
+  border: 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  border-radius: 8px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+.sidebar__reports-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.sidebar__reports-label {
+  flex: 1;
+  letter-spacing: 0.3px;
+}
+
+.sidebar__reports-chevron {
+  font-size: 20px;
+  opacity: 0.7;
+}
+
+.sidebar__reports-body {
+  padding: 4px 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+// ─── Inline firm picker ──────────────────────────────────────────────────────
+.sidebar__firm-picker {
+  position: relative;
+  margin: 0 12px 4px;
+}
+
+.sidebar__firm-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.10);
+  }
+}
+
+.sidebar__firm-icon {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+}
+
+.sidebar__firm-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar__firm-chevron {
+  font-size: 18px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.sidebar__firm-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  background: rgba(20, 20, 30, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  z-index: 30;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.sidebar__firm-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: 0;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  font-size: 0.8rem;
+  text-align: left;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .material-icons {
+    font-size: 16px;
+    margin-left: auto;
+    color: var(--color-accent, #e94560);
+  }
+
+  &--active {
+    color: #fff;
+    font-weight: 600;
+  }
+}
+
+.sidebar__firm-empty {
+  padding: 10px 12px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+}
+
+// ─── Sub-section label inside Reports ────────────────────────────────────────
+.sidebar__sub-label {
+  display: block;
+  padding: 4px 16px 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: rgba(255, 255, 255, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+
+.sidebar--collapsed .sidebar__reports {
+  // In collapsed mode the reports block is just a single icon link
+}

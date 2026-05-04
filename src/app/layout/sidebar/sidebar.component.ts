@@ -2,6 +2,7 @@ import { Component, computed, inject, input, output, signal } from '@angular/cor
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TenantService } from '../../core/services/tenant.service';
 import { AuthService } from '../../core/services/auth.service';
+import { Firm } from '../../core/models/firm.model';
 
 interface NavItem {
   label: string;
@@ -31,6 +32,21 @@ export class SidebarComponent {
   mobileOpen = input(false);
   closeMobile = output<void>();
 
+  reportsExpanded = signal(true);
+  firmDropdownOpen = signal(false);
+
+  // Reports section - rendered as a special collapsible block.
+  reportItems: NavItem[] = [
+    { label: 'Gelir-Gider Tablosu', path: '/reports', icon: 'table_chart', exact: true },
+    { label: 'Bütçe Performans', path: '/reports/budget', icon: 'savings' },
+    { label: 'Cari Yaşlandırma', path: '/reports/aging', icon: 'schedule' },
+    { label: 'Gider Dağılımı', path: '/reports/expense-breakdown', icon: 'pie_chart' },
+    { label: 'Geciken İşlemler', path: '/reports/overdue', icon: 'warning' },
+  ];
+
+  consolidatedItem: NavItem = { label: 'Konsolide', path: '/consolidated', icon: 'view_module' };
+
+  // Standard groups (everything except Reports).
   private allNavGroups: NavGroup[] = [
     {
       groupLabel: 'Ana Sayfa',
@@ -53,17 +69,6 @@ export class SidebarComponent {
       ],
     },
     {
-      groupLabel: 'Raporlar',
-      items: [
-        { label: 'Gelir-Gider Tablosu', path: '/reports', icon: 'table_chart', exact: true },
-        { label: 'Bütçe Performans', path: '/reports/budget', icon: 'savings' },
-        { label: 'Cari Yaşlandırma', path: '/reports/aging', icon: 'schedule' },
-        { label: 'Gider Dağılımı', path: '/reports/expense-breakdown', icon: 'pie_chart' },
-        { label: 'Geciken İşlemler', path: '/reports/overdue', icon: 'warning' },
-        { label: 'Konsolide', path: '/consolidated', icon: 'view_module' },
-      ],
-    },
-    {
       groupLabel: 'Yönetim',
       superAdminOnly: true,
       items: [
@@ -83,5 +88,25 @@ export class SidebarComponent {
 
   onNavClick(): void {
     this.closeMobile.emit();
+    this.firmDropdownOpen.set(false);
+  }
+
+  toggleReports(): void {
+    if (this.collapsed()) return;
+    this.reportsExpanded.update(v => !v);
+  }
+
+  toggleFirmDropdown(event: Event): void {
+    event.stopPropagation();
+    this.firmDropdownOpen.update(v => !v);
+  }
+
+  selectFirm(firm: Firm): void {
+    this.tenantService.switchFirm(firm);
+    this.firmDropdownOpen.set(false);
+  }
+
+  closeFirmDropdown(): void {
+    this.firmDropdownOpen.set(false);
   }
 }
