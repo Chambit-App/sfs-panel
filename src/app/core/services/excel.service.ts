@@ -78,58 +78,15 @@ export class ExcelService {
     wb.creator = 'SFSPanel';
     wb.created = ctx.generatedAt;
 
-    // ── Reference sheets ───────────────────────────────────────────
-    const cariSheet = wb.addWorksheet('Cariler');
-    cariSheet.columns = [
-      { header: 'UUID', key: 'id', width: 38 },
-      { header: 'Ad', key: 'name', width: 36 },
-      { header: 'Tip', key: 'type', width: 12 },
-    ];
-    cariSheet.getRow(1).font = { bold: true };
-    ctx.cariler.forEach(c => cariSheet.addRow(c));
-    cariSheet.views = [{ state: 'frozen', ySplit: 1 }];
+    const TEMPLATE_ROWS = 200;
+    const cariCount = Math.max(ctx.cariler.length, 1);
+    const catCount = Math.max(ctx.categories.length, 1);
+    const bankCount = Math.max(ctx.banks.length, 1);
 
-    const catSheet = wb.addWorksheet('Kategoriler');
-    catSheet.columns = [
-      { header: 'UUID', key: 'id', width: 38 },
-      { header: 'Ad', key: 'name', width: 36 },
-      { header: 'Tip', key: 'type', width: 12 },
-    ];
-    catSheet.getRow(1).font = { bold: true };
-    ctx.categories.forEach(c => catSheet.addRow(c));
-    catSheet.views = [{ state: 'frozen', ySplit: 1 }];
-
-    const bankSheet = wb.addWorksheet('Bankalar');
-    bankSheet.columns = [
-      { header: 'UUID', key: 'id', width: 38 },
-      { header: 'Banka Adı', key: 'name', width: 36 },
-    ];
-    bankSheet.getRow(1).font = { bold: true };
-    ctx.banks.forEach(b => bankSheet.addRow(b));
-    bankSheet.views = [{ state: 'frozen', ySplit: 1 }];
-
-    // ── Info sheet ─────────────────────────────────────────────────
-    const info = wb.addWorksheet('Bilgi');
-    info.columns = [{ width: 28 }, { width: 60 }];
-    info.addRow(['Firma', ctx.firmName]);
-    info.addRow(['Şablon oluşturma tarihi', ctx.generatedAt.toLocaleString('tr-TR')]);
-    info.addRow(['Cari sayısı', ctx.cariler.length]);
-    info.addRow(['Kategori sayısı', ctx.categories.length]);
-    info.addRow(['Banka sayısı', ctx.banks.length]);
-    info.addRow([]);
-    info.addRow(['Kullanım', '"Ödemeler" sayfasında her satıra:']);
-    info.addRow(['', '1) "Cari Adı" hücresine tıkla, açılan listeden seç']);
-    info.addRow(['', '2) "Cari ID (UUID)" hücresi otomatik dolar (formül)']);
-    info.addRow(['', '3) Aynısını Kategori ve Banka için tekrarla']);
-    info.addRow(['', '4) Diğer alanları (tip, tarih, tutar, durum, açıklama) doldur']);
-    info.addRow([]);
-    info.addRow(['Uyarı', 'Yeni cari/kategori/banka eklediyseniz şablonu yeniden indirin.']);
-    info.addRow(['', 'Bu şablon yalnızca yukarıda listelenen kayıtları içerir.']);
-    info.getColumn(1).font = { bold: true };
-
-    // ── Main data sheet ────────────────────────────────────────────
-    const ws = wb.addWorksheet('Ödemeler');
-    ws.views = [{ state: 'frozen', ySplit: 1 }];
+    // ── Main data sheet (added FIRST so it becomes the first tab) ──
+    const ws = wb.addWorksheet('Ödemeler', {
+      views: [{ state: 'frozen', ySplit: 1 }],
+    });
 
     const columns = [
       { header: 'Tip', key: 'type', width: 10 },
@@ -166,50 +123,40 @@ export class ExcelService {
       };
     }
 
-    const TEMPLATE_ROWS = 200;
-    const cariCount = Math.max(ctx.cariler.length, 1);
-    const catCount = Math.max(ctx.categories.length, 1);
-    const bankCount = Math.max(ctx.banks.length, 1);
-
     for (let i = 2; i <= TEMPLATE_ROWS + 1; i++) {
-      // Tip dropdown
       ws.getCell(`A${i}`).dataValidation = {
         type: 'list',
         allowBlank: true,
         formulae: ['"GELIR,GIDER"'],
       };
 
-      // Cari Adı dropdown → Cari ID auto-fill
       ws.getCell(`B${i}`).dataValidation = {
         type: 'list',
         allowBlank: true,
-        formulae: [`=Cariler!$B$2:$B$${cariCount + 1}`],
+        formulae: [`Cariler!$B$2:$B$${cariCount + 1}`],
       };
       ws.getCell(`C${i}`).value = {
         formula: `IF(B${i}="","",IFERROR(INDEX(Cariler!$A$2:$A$${cariCount + 1}, MATCH(B${i}, Cariler!$B$2:$B$${cariCount + 1}, 0)),""))`,
       };
 
-      // Kategori Adı dropdown → Kategori ID auto-fill
       ws.getCell(`D${i}`).dataValidation = {
         type: 'list',
         allowBlank: true,
-        formulae: [`=Kategoriler!$B$2:$B$${catCount + 1}`],
+        formulae: [`Kategoriler!$B$2:$B$${catCount + 1}`],
       };
       ws.getCell(`E${i}`).value = {
         formula: `IF(D${i}="","",IFERROR(INDEX(Kategoriler!$A$2:$A$${catCount + 1}, MATCH(D${i}, Kategoriler!$B$2:$B$${catCount + 1}, 0)),""))`,
       };
 
-      // Banka Adı dropdown → Banka ID auto-fill
       ws.getCell(`F${i}`).dataValidation = {
         type: 'list',
         allowBlank: true,
-        formulae: [`=Bankalar!$B$2:$B$${bankCount + 1}`],
+        formulae: [`Bankalar!$B$2:$B$${bankCount + 1}`],
       };
       ws.getCell(`G${i}`).value = {
         formula: `IF(F${i}="","",IFERROR(INDEX(Bankalar!$A$2:$A$${bankCount + 1}, MATCH(F${i}, Bankalar!$B$2:$B$${bankCount + 1}, 0)),""))`,
       };
 
-      // Durum dropdown
       ws.getCell(`M${i}`).dataValidation = {
         type: 'list',
         allowBlank: true,
@@ -217,11 +164,70 @@ export class ExcelService {
       };
     }
 
-    // Reorder sheets so user lands on Ödemeler when opening
-    wb.worksheets.sort((a, b) => {
-      const order = ['Ödemeler', 'Cariler', 'Kategoriler', 'Bankalar', 'Bilgi'];
-      return order.indexOf(a.name) - order.indexOf(b.name);
+    // ── Reference sheets ───────────────────────────────────────────
+    const cariSheet = wb.addWorksheet('Cariler', {
+      views: [{ state: 'frozen', ySplit: 1 }],
     });
+    cariSheet.columns = [
+      { header: 'UUID', key: 'id', width: 38 },
+      { header: 'Ad', key: 'name', width: 36 },
+      { header: 'Tip', key: 'type', width: 12 },
+    ];
+    cariSheet.getRow(1).font = { bold: true };
+    ctx.cariler.forEach(c => cariSheet.addRow(c));
+
+    const catSheet = wb.addWorksheet('Kategoriler', {
+      views: [{ state: 'frozen', ySplit: 1 }],
+    });
+    catSheet.columns = [
+      { header: 'UUID', key: 'id', width: 38 },
+      { header: 'Ad', key: 'name', width: 36 },
+      { header: 'Tip', key: 'type', width: 12 },
+    ];
+    catSheet.getRow(1).font = { bold: true };
+    ctx.categories.forEach(c => catSheet.addRow(c));
+
+    const bankSheet = wb.addWorksheet('Bankalar', {
+      views: [{ state: 'frozen', ySplit: 1 }],
+    });
+    bankSheet.columns = [
+      { header: 'UUID', key: 'id', width: 38 },
+      { header: 'Banka Adı', key: 'name', width: 36 },
+    ];
+    bankSheet.getRow(1).font = { bold: true };
+    ctx.banks.forEach(b => bankSheet.addRow(b));
+
+    // ── Info sheet ─────────────────────────────────────────────────
+    const info = wb.addWorksheet('Bilgi');
+    info.columns = [{ width: 28 }, { width: 60 }];
+    info.addRow(['Firma', ctx.firmName]);
+    info.addRow(['Şablon oluşturma tarihi', ctx.generatedAt.toLocaleString('tr-TR')]);
+    info.addRow(['Cari sayısı', ctx.cariler.length]);
+    info.addRow(['Kategori sayısı', ctx.categories.length]);
+    info.addRow(['Banka sayısı', ctx.banks.length]);
+    info.addRow([]);
+    info.addRow(['Kullanım', '"Ödemeler" sayfasında her satıra:']);
+    info.addRow(['', '1) "Cari Adı" hücresine tıkla, açılan listeden seç']);
+    info.addRow(['', '2) "Cari ID (UUID)" hücresi otomatik dolar (formül)']);
+    info.addRow(['', '3) Aynısını Kategori ve Banka için tekrarla']);
+    info.addRow(['', '4) Diğer alanları (tip, tarih, tutar, durum, açıklama) doldur']);
+    info.addRow([]);
+    info.addRow(['Uyarı', 'Yeni cari/kategori/banka eklediyseniz şablonu yeniden indirin.']);
+    info.addRow(['', 'Bu şablon yalnızca yukarıda listelenen kayıtları içerir.']);
+    info.getColumn(1).font = { bold: true };
+
+    // Force Excel to open on the Ödemeler tab (first tab)
+    wb.views = [
+      {
+        x: 0,
+        y: 0,
+        width: 12000,
+        height: 24000,
+        firstSheet: 0,
+        activeTab: 0,
+        visibility: 'visible',
+      },
+    ];
 
     const buffer = await wb.xlsx.writeBuffer();
     return new Blob([buffer], {
