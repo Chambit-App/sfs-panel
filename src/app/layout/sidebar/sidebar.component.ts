@@ -35,7 +35,6 @@ export class SidebarComponent {
 
   // Single flat list shown when Reports section is expanded.
   reportItems: NavItem[] = [
-    { label: 'Konsolide', path: '/consolidated', icon: 'view_module' },
     { label: 'Gelir-Gider Tablosu', path: '/reports', icon: 'table_chart', exact: true },
     { label: 'Ödeme Takvimi', path: '/reports/payment-schedule', icon: 'event_note' },
     { label: 'Aylık Trend', path: '/reports/rolling-trend', icon: 'trending_up' },
