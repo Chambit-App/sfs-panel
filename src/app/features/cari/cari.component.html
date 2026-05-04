@@ -75,6 +75,14 @@
             </div>
           </div>
           <div class="toolbar__right">
+            <button class="btn btn--ghost" (click)="exportCari()" [disabled]="cariAccounts().length === 0">
+              <span class="material-icons">download</span>
+              Excel İndir
+            </button>
+            <a class="btn btn--ghost" routerLink="/cari/import">
+              <span class="material-icons">upload_file</span>
+              Excel'den Yükle
+            </a>
             <button class="btn btn--primary" (click)="openCreate()">
               <span class="material-icons">add</span>
               Yeni Cari

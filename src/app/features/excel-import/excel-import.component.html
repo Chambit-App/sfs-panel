@@ -1,0 +1,188 @@
+<app-page-header
+  [title]="'Excel\'den Yükle: ' + (schema()?.title ?? '')"
+  [subtitle]="activeFirm()?.name ?? 'Firma seçilmedi'"
+/>
+
+@if (!activeFirm()) {
+  <div class="ximp__empty">
+    <span class="material-icons">business</span>
+    <p>Devam etmek için üst menüden bir firma seçin.</p>
+  </div>
+} @else if (schema(); as s) {
+  <div class="ximp__layout">
+    <!-- Documentation panel -->
+    <section class="ximp__docs card">
+      <header>
+        <span class="material-icons">description</span>
+        <h3>Excel Formatı</h3>
+      </header>
+
+      <p class="ximp__intro">
+        Aşağıdaki kolonları içeren bir Excel dosyası hazırla ve yükle. Önce
+        boş şablonu indirip üzerine doldurmak en kolayı.
+      </p>
+
+      <button class="btn btn--accent" (click)="downloadTemplate()">
+        <span class="material-icons">download</span>
+        Boş Şablon İndir (.xlsx)
+      </button>
+
+      <h4>Kolonlar</h4>
+      <div class="ximp__cols-table-wrapper">
+        <table class="ximp__cols-table">
+          <thead>
+            <tr>
+              <th>Kolon Başlığı</th>
+              <th>Tip</th>
+              <th>Zorunlu</th>
+              <th>Örnek</th>
+              <th>Açıklama</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (col of s.columns; track col.key) {
+              <tr>
+                <td><code>{{ col.label }}</code></td>
+                <td>
+                  <span class="ximp__type-badge ximp__type-badge--{{ col.type }}">
+                    {{ col.type }}
+                  </span>
+                  @if (col.enumValues) {
+                    <small>({{ col.enumValues.join(' | ') }})</small>
+                  }
+                </td>
+                <td>
+                  @if (col.required) {
+                    <span class="ximp__req">Evet</span>
+                  } @else {
+                    <span class="ximp__opt">Hayır</span>
+                  }
+                </td>
+                <td><code>{{ col.example ?? '' }}</code></td>
+                <td class="ximp__desc-cell">{{ col.description ?? '' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Notlar</h4>
+      <ul class="ximp__notes">
+        @for (n of s.notes; track n) {
+          <li>{{ n }}</li>
+        }
+      </ul>
+    </section>
+
+    <!-- Upload panel -->
+    <section class="ximp__upload card">
+      <header>
+        <span class="material-icons">upload_file</span>
+        <h3>Dosya Yükle</h3>
+      </header>
+
+      @if (!hasFile()) {
+        <label class="ximp__file-drop">
+          <input
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            (change)="onFileSelected($event)"
+            hidden
+          />
+          <span class="material-icons">cloud_upload</span>
+          <strong>Dosya seç veya buraya sürükle</strong>
+          <small>.xlsx, .xls veya .csv kabul edilir</small>
+        </label>
+      } @else {
+        <div class="ximp__file-info">
+          <span class="material-icons">insert_drive_file</span>
+          <span class="ximp__file-name">{{ fileName() }}</span>
+          <button class="btn btn--ghost btn--sm" (click)="clearFile()">Kaldır</button>
+        </div>
+
+        <div class="ximp__summary">
+          <div class="ximp__stat ximp__stat--ok">
+            <span class="material-icons">check_circle</span>
+            <strong>{{ validCount() }}</strong>
+            <span>geçerli satır</span>
+          </div>
+          @if (invalidCount() > 0) {
+            <div class="ximp__stat ximp__stat--err">
+              <span class="material-icons">error</span>
+              <strong>{{ invalidCount() }}</strong>
+              <span>hatalı satır</span>
+            </div>
+          }
+        </div>
+
+        <div class="ximp__preview-wrapper">
+          <table class="ximp__preview">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Durum</th>
+                @for (col of s.columns; track col.key) {
+                  <th>{{ col.label }}</th>
+                }
+                <th>Hatalar</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of parsedRows(); track row.rowNumber) {
+                <tr [class.ximp__row--err]="!row.isValid">
+                  <td>{{ row.rowNumber }}</td>
+                  <td>
+                    @if (row.isValid) {
+                      <span class="material-icons ximp__icon-ok">check</span>
+                    } @else {
+                      <span class="material-icons ximp__icon-err">close</span>
+                    }
+                  </td>
+                  @for (col of s.columns; track col.key) {
+                    <td>{{ cellValue(row, col.key) }}</td>
+                  }
+                  <td class="ximp__errors-cell">
+                    @if (row.errors.length > 0) {
+                      <ul>
+                        @for (e of row.errors; track e) {
+                          <li>{{ e }}</li>
+                        }
+                      </ul>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="ximp__actions">
+          <a [routerLink]="returnRoute()" class="btn btn--ghost">
+            <span class="material-icons">arrow_back</span>
+            İptal
+          </a>
+          <button
+            class="btn btn--primary"
+            (click)="upload()"
+            [disabled]="uploading() || validCount() === 0"
+          >
+            @if (uploading()) {
+              <span class="material-icons spin">refresh</span>
+              Yükleniyor…
+            } @else {
+              <span class="material-icons">cloud_done</span>
+              {{ validCount() }} satırı yükle
+            }
+          </button>
+        </div>
+      }
+
+      @if (parsing()) {
+        <div class="ximp__parsing">
+          <span class="material-icons spin">refresh</span>
+          Dosya okunuyor…
+        </div>
+      }
+    </section>
+  </div>
+}

@@ -66,6 +66,14 @@ $shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 }
 
+.payments-list-header {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
 // ─── Panel Container ────────────────────────────────────────────────────────────
 .payments-panel {
   background: $color-bg-white;

@@ -61,10 +61,20 @@
     <div class="bank__section">
       <div class="bank__section-header">
         <h2 class="bank__section-title">Banka Hesapları</h2>
-        <button class="btn btn--primary" (click)="openAddAccount()">
-          <span class="material-icons">add</span>
-          Yeni Hesap Ekle
-        </button>
+        <div class="bank__header-actions">
+          <button class="btn btn--ghost" (click)="exportAccounts()" [disabled]="accounts().length === 0">
+            <span class="material-icons">download</span>
+            Excel İndir
+          </button>
+          <a class="btn btn--ghost" routerLink="/bank/import">
+            <span class="material-icons">upload_file</span>
+            Excel'den Yükle
+          </a>
+          <button class="btn btn--primary" (click)="openAddAccount()">
+            <span class="material-icons">add</span>
+            Yeni Hesap Ekle
+          </button>
+        </div>
       </div>
 
       @if (loading()) {
