@@ -133,7 +133,7 @@ export class ExcelService {
       ws.getCell(`B${i}`).dataValidation = {
         type: 'list',
         allowBlank: true,
-        formulae: [`=Cariler!$B$2:$B$${cariCount + 1}`],
+        formulae: [`Cariler!$B$2:$B$${cariCount + 1}`],
       };
       ws.getCell(`C${i}`).value = {
         formula: `IF(B${i}="","",IFERROR(INDEX(Cariler!$A$2:$A$${cariCount + 1}, MATCH(B${i}, Cariler!$B$2:$B$${cariCount + 1}, 0)),""))`,
@@ -142,7 +142,7 @@ export class ExcelService {
       ws.getCell(`D${i}`).dataValidation = {
         type: 'list',
         allowBlank: true,
-        formulae: [`=Kategoriler!$B$2:$B$${catCount + 1}`],
+        formulae: [`Kategoriler!$B$2:$B$${catCount + 1}`],
       };
       ws.getCell(`E${i}`).value = {
         formula: `IF(D${i}="","",IFERROR(INDEX(Kategoriler!$A$2:$A$${catCount + 1}, MATCH(D${i}, Kategoriler!$B$2:$B$${catCount + 1}, 0)),""))`,
@@ -151,7 +151,7 @@ export class ExcelService {
       ws.getCell(`F${i}`).dataValidation = {
         type: 'list',
         allowBlank: true,
-        formulae: [`=Bankalar!$B$2:$B$${bankCount + 1}`],
+        formulae: [`Bankalar!$B$2:$B$${bankCount + 1}`],
       };
       ws.getCell(`G${i}`).value = {
         formula: `IF(F${i}="","",IFERROR(INDEX(Bankalar!$A$2:$A$${bankCount + 1}, MATCH(F${i}, Bankalar!$B$2:$B$${bankCount + 1}, 0)),""))`,
