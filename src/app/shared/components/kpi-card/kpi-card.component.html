@@ -16,6 +16,9 @@
 
     <div class="kpi-card__trend" [class]="trendClass">
       <span class="material-icons kpi-card__trend-icon">{{ trendIcon }}</span>
+      @if (formattedDelta) {
+        <span class="kpi-card__delta">{{ formattedDelta }}</span>
+      }
     </div>
   </div>
 </div>

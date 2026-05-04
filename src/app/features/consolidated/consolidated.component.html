@@ -80,13 +80,13 @@
       />
       <app-kpi-card
         title="Toplam Gider"
-        [value]="kpis().totalGelir"
+        [value]="kpis().totalGider"
         icon="trending_down"
         trend="down"
         format="currency"
       />
       <app-kpi-card
-        title="Net Kar / Zarar"
+        title="Gelir-Gider"
         [value]="kpis().net"
         icon="account_balance_wallet"
         [trend]="netTrend()"
@@ -233,7 +233,7 @@
                   <td class="con__td con__td--total">{{ formatCurrency(kpis().totalGider) }}</td>
                 </tr>
                 <tr class="con__comparison-row con__comparison-row--net">
-                  <td class="con__td con__td--category">Net Kar/Zarar</td>
+                  <td class="con__td con__td--category">Gelir-Gider</td>
                   @for (firm of firmBreakdown(); track firm.firm_id) {
                     <td class="con__td con__td--amount" [class.con__td--negative]="firm.net < 0">
                       {{ formatCurrency(firm.net) }}

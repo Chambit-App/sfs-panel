@@ -55,6 +55,30 @@ export class DashboardComponent implements OnInit {
   netTrend = computed(() => (this.kpi().netKarZarar >= 0 ? 'up' : 'down') as 'up' | 'down');
   currentYear = new Date().getFullYear();
 
+  // Month-over-month deltas computed from monthly trend
+  private monthlyDeltas = computed(() => {
+    const trend = this.monthlyTrend();
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1; // 1-12
+    const current = trend.find(t => t.month === currentMonth);
+    const previous = trend.find(t => t.month === currentMonth - 1);
+    if (!current || !previous) return { gelir: null, gider: null, net: null };
+    const pct = (curr: number, prev: number): number | null => {
+      if (prev === 0) return curr === 0 ? 0 : null;
+      return ((curr - prev) / Math.abs(prev)) * 100;
+    };
+    const currNet = current.gelir - current.gider;
+    const prevNet = previous.gelir - previous.gider;
+    return {
+      gelir: pct(current.gelir, previous.gelir),
+      gider: pct(current.gider, previous.gider),
+      net: pct(currNet, prevNet),
+    };
+  });
+  gelirDelta = computed(() => this.monthlyDeltas().gelir);
+  giderDelta = computed(() => this.monthlyDeltas().gider);
+  netDelta = computed(() => this.monthlyDeltas().net);
+
   // Chart data
   barChartData = signal<ChartData<'bar'>>({ labels: [], datasets: [] });
   doughnutChartData = signal<ChartData<'doughnut'>>({ labels: [], datasets: [] });
