@@ -203,4 +203,57 @@
       }
     </div>
   </div>
+
+  <!-- Top Cariler Row -->
+  <div class="dashboard__tables">
+    <!-- Top 5 Müşteri -->
+    <div class="dashboard__card">
+      <div class="dashboard__card-header">
+        <span class="material-icons">people</span>
+        <h3>Top 5 Müşteri ({{ currentYear }})</h3>
+        <a routerLink="/reports/top-cari" class="dashboard__card-link">Tümü →</a>
+      </div>
+      @if (topMusteri().length > 0) {
+        <ol class="dashboard__top-list">
+          @for (c of topMusteri(); track c.cari_id; let i = $index) {
+            <li>
+              <span class="dashboard__top-rank">{{ i + 1 }}</span>
+              <span class="dashboard__top-name">{{ c.cari_name }}</span>
+              <span class="dashboard__top-amount dashboard__top-amount--g">{{ formatCurrency(c.total_amount) }}</span>
+            </li>
+          }
+        </ol>
+      } @else {
+        <div class="dashboard__table-empty">
+          <span class="material-icons">people</span>
+          <p>Bu yıl için müşteri tahsilatı yok.</p>
+        </div>
+      }
+    </div>
+
+    <!-- Top 5 Tedarikçi -->
+    <div class="dashboard__card">
+      <div class="dashboard__card-header">
+        <span class="material-icons">inventory_2</span>
+        <h3>Top 5 Tedarikçi ({{ currentYear }})</h3>
+        <a routerLink="/reports/top-cari" class="dashboard__card-link">Tümü →</a>
+      </div>
+      @if (topTedarikci().length > 0) {
+        <ol class="dashboard__top-list">
+          @for (c of topTedarikci(); track c.cari_id; let i = $index) {
+            <li>
+              <span class="dashboard__top-rank">{{ i + 1 }}</span>
+              <span class="dashboard__top-name">{{ c.cari_name }}</span>
+              <span class="dashboard__top-amount dashboard__top-amount--r">{{ formatCurrency(c.total_amount) }}</span>
+            </li>
+          }
+        </ol>
+      } @else {
+        <div class="dashboard__table-empty">
+          <span class="material-icons">inventory_2</span>
+          <p>Bu yıl için tedarikçi ödemesi yok.</p>
+        </div>
+      }
+    </div>
+  </div>
 }

@@ -1,0 +1,85 @@
+<app-page-header
+  title="Aylık Trend"
+  [subtitle]="(activeFirm()?.name ?? 'Firma seçilmedi') + ' • Son ' + windowMonths() + ' Ay'"
+/>
+
+@if (!activeFirm()) {
+  <div class="rt__empty">
+    <span class="material-icons">business</span>
+    <p>Devam etmek için üst menüden bir firma seçin.</p>
+  </div>
+} @else {
+  <div class="rt__toolbar">
+    <div class="rt__control">
+      <label>Pencere</label>
+      <select [ngModel]="windowMonths()" (ngModelChange)="onWindowChange($event)">
+        @for (m of windowOptions; track m) { <option [value]="m">Son {{ m }} ay</option> }
+      </select>
+    </div>
+    <button
+      type="button"
+      class="rt__export"
+      (click)="exportExcel()"
+      [disabled]="trend().length === 0"
+    >
+      <span class="material-icons">download</span>
+      Excel İndir
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="rt__loading"><span class="material-icons spin">refresh</span> Yükleniyor…</div>
+  } @else {
+    <!-- KPI cards -->
+    <div class="rt__totals">
+      <div class="rt__total rt__total--g">
+        <span>Toplam Gelir</span>
+        <strong>{{ totals().gelir | currencyTry }}</strong>
+        <small>Aylık ort. {{ totals().avgMonthlyGelir | currencyTry }}</small>
+      </div>
+      <div class="rt__total rt__total--r">
+        <span>Toplam Gider</span>
+        <strong>{{ totals().gider | currencyTry }}</strong>
+        <small>Aylık ort. {{ totals().avgMonthlyGider | currencyTry }}</small>
+      </div>
+      <div class="rt__total" [class.rt__total--g]="totals().net >= 0" [class.rt__total--r]="totals().net < 0">
+        <span>Net</span>
+        <strong>{{ totals().net | currencyTry }}</strong>
+        <small>{{ trend().length }} aylık toplam</small>
+      </div>
+    </div>
+
+    <div class="rt__card">
+      <div class="rt__chart-wrap">
+        <canvas baseChart
+          [data]="chartData()"
+          [options]="chartOptions"
+          type="line">
+        </canvas>
+      </div>
+    </div>
+
+    <div class="rt__table-wrapper">
+      <table class="rt__table">
+        <thead>
+          <tr>
+            <th>Ay</th>
+            <th class="num">Gelir</th>
+            <th class="num">Gider</th>
+            <th class="num">Net</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of trend(); track m.label) {
+            <tr>
+              <td>{{ m.label }}</td>
+              <td class="num pos">{{ m.gelir | currencyTry }}</td>
+              <td class="num neg">{{ m.gider | currencyTry }}</td>
+              <td class="num" [class.pos]="m.net >= 0" [class.neg]="m.net < 0">{{ m.net | currencyTry }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}

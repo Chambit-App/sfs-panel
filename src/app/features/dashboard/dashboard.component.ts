@@ -7,6 +7,7 @@ import {
   effect,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { BaseChartDirective } from 'ng2-charts';
 import { Chart, ChartConfiguration, ChartData, BarController, BarElement, CategoryScale, LinearScale, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js';
 
@@ -16,6 +17,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 import { KpiCardComponent } from '../../shared/components/kpi-card/kpi-card.component';
 import { TenantService } from '../../core/services/tenant.service';
 import { DashboardService, KpiSummary, MonthlyTrendItem, BankBalance } from './dashboard.service';
+import { ReportsService, TopCariRow } from '../reports/reports.service';
 import { Transaction } from '../../core/models/transaction.model';
 
 const TURKISH_MONTHS = [
@@ -26,13 +28,14 @@ const TURKISH_MONTHS = [
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, PageHeaderComponent, KpiCardComponent, BaseChartDirective],
+  imports: [CommonModule, RouterLink, PageHeaderComponent, KpiCardComponent, BaseChartDirective],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent implements OnInit {
   private tenantService = inject(TenantService);
   private dashboardService = inject(DashboardService);
+  private reportsService = inject(ReportsService);
 
   // State signals
   loading = signal(false);
@@ -48,6 +51,8 @@ export class DashboardComponent implements OnInit {
   bankBalances = signal<BankBalance[]>([]);
   upcomingPayments = signal<Transaction[]>([]);
   overduePayments = signal<Transaction[]>([]);
+  topMusteri = signal<TopCariRow[]>([]);
+  topTedarikci = signal<TopCariRow[]>([]);
 
   // Derived
   activeFirm = this.tenantService.activeFirm;
@@ -144,12 +149,13 @@ export class DashboardComponent implements OnInit {
     this.loading.set(true);
     try {
       const currentYear = new Date().getFullYear();
-      const [kpi, trend, banks, upcoming, overdue] = await Promise.all([
+      const [kpi, trend, banks, upcoming, overdue, topCari] = await Promise.all([
         this.dashboardService.getKpiSummary(firmId),
         this.dashboardService.getMonthlyTrend(firmId, currentYear),
         this.dashboardService.getBankBalances(firmId),
         this.dashboardService.getUpcomingPayments(firmId, 7),
         this.dashboardService.getOverduePayments(firmId),
+        this.reportsService.getTopCariler(firmId, currentYear, 5),
       ]);
 
       this.kpi.set(kpi);
@@ -157,6 +163,8 @@ export class DashboardComponent implements OnInit {
       this.bankBalances.set(banks);
       this.upcomingPayments.set(upcoming);
       this.overduePayments.set(overdue);
+      this.topMusteri.set(topCari.musteri);
+      this.topTedarikci.set(topCari.tedarikci);
 
       this.buildBarChart(trend);
       this.buildDoughnutChart(banks);
@@ -180,6 +188,8 @@ export class DashboardComponent implements OnInit {
     this.bankBalances.set([]);
     this.upcomingPayments.set([]);
     this.overduePayments.set([]);
+    this.topMusteri.set([]);
+    this.topTedarikci.set([]);
     this.barChartData.set({ labels: [], datasets: [] });
     this.doughnutChartData.set({ labels: [], datasets: [] });
   }
