@@ -124,6 +124,19 @@ export interface BankTrendRow {
   monthly: number[];    // 12 entries, cumulative balance at end of each month
 }
 
+// ── Payment schedule row (one per chart account) ─────────────────────────────
+export interface ScheduleRow {
+  code: string;
+  name: string;
+  type: 'GELIR' | 'GIDER';
+  monthly: number[];        // 12 totals (filtered by status if requested)
+  monthlyPending: number[]; // 12 totals of just BEKLIYOR portion
+  total: number;
+  totalPending: number;
+}
+
+export type ScheduleStatusFilter = 'ALL_OPEN' | 'PENDING' | 'PAID';
+
 @Injectable({ providedIn: 'root' })
 export class ReportsService {
   private supabaseService = inject(SupabaseService);
@@ -670,5 +683,85 @@ export class ReportsService {
     }
 
     return result;
+  }
+
+  // ── Public: Payment schedule (account × month matrix on due_date) ──────────
+  async getPaymentSchedule(
+    firmId: string,
+    year: number,
+    statusFilter: ScheduleStatusFilter = 'ALL_OPEN',
+  ): Promise<ScheduleRow[]> {
+    const startDate = `${year}-01-01`;
+    const endDate = `${year}-12-31`;
+
+    const { data, error } = await this.client
+      .from('transactions')
+      .select(
+        'type, amount, due_date, status, ' +
+          'category_items!inner(chart_account_id, ' +
+          'chart_of_accounts!inner(code, name, type, parent_code))',
+      )
+      .eq('firm_id', firmId)
+      .neq('status', 'IPTAL')
+      .gte('due_date', startDate)
+      .lte('due_date', endDate);
+
+    if (error) {
+      console.error('Error fetching payment schedule:', error);
+      return [];
+    }
+
+    // Group by chart account, sum into monthly buckets
+    const map = new Map<string, ScheduleRow>();
+
+    for (const row of (data as unknown as Array<Record<string, unknown>> ?? [])) {
+      const cat = row['category_items'] as
+        | { chart_account_id: string; chart_of_accounts: Record<string, unknown> | Record<string, unknown>[] }
+        | null;
+      if (!cat?.chart_of_accounts) continue;
+
+      const coaRaw = cat.chart_of_accounts;
+      const coa = (Array.isArray(coaRaw) ? coaRaw[0] : coaRaw) as
+        | { code: string; name: string; type: 'GELIR' | 'GIDER'; parent_code: string | null }
+        | null;
+      if (!coa) continue;
+
+      const status = row['status'] as 'BEKLIYOR' | 'ODENDI';
+      const monthIdx = new Date(row['due_date'] as string).getMonth();
+      const amount = Number(row['amount']) || 0;
+
+      // Apply status filter to the main "monthly" / "total"
+      let include = true;
+      if (statusFilter === 'PENDING' && status !== 'BEKLIYOR') include = false;
+      if (statusFilter === 'PAID' && status !== 'ODENDI') include = false;
+
+      let entry = map.get(coa.code);
+      if (!entry) {
+        entry = {
+          code: coa.code,
+          name: coa.name,
+          type: coa.type,
+          monthly: Array(12).fill(0),
+          monthlyPending: Array(12).fill(0),
+          total: 0,
+          totalPending: 0,
+        };
+        map.set(coa.code, entry);
+      }
+      if (include) {
+        entry.monthly[monthIdx] += amount;
+        entry.total += amount;
+      }
+      if (status === 'BEKLIYOR') {
+        entry.monthlyPending[monthIdx] += amount;
+        entry.totalPending += amount;
+      }
+    }
+
+    return [...map.values()].sort((a, b) => {
+      // Gelir first, then gider; within each by code
+      if (a.type !== b.type) return a.type === 'GELIR' ? -1 : 1;
+      return a.code.localeCompare(b.code);
+    });
   }
 }

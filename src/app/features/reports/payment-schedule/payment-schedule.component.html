@@ -1,0 +1,161 @@
+<app-page-header
+  title="Ödeme Takvimi"
+  [subtitle]="(activeFirm()?.name ?? 'Firma seçilmedi') + ' • ' + selectedYear()"
+/>
+
+@if (!activeFirm()) {
+  <div class="ps__empty">
+    <span class="material-icons">business</span>
+    <p>Devam etmek için üst menüden bir firma seçin.</p>
+  </div>
+} @else {
+  <div class="ps__toolbar">
+    <div class="ps__control">
+      <label>Yıl</label>
+      <select [ngModel]="selectedYear()" (ngModelChange)="onYearChange($event)">
+        @for (y of yearOptions; track y) { <option [value]="y">{{ y }}</option> }
+      </select>
+    </div>
+    <div class="ps__control">
+      <label>Durum</label>
+      <select [ngModel]="statusFilter()" (ngModelChange)="onStatusChange($event)">
+        <option value="ALL_OPEN">Tümü (iptal hariç)</option>
+        <option value="PENDING">Sadece Bekleyen</option>
+        <option value="PAID">Sadece Ödenmiş</option>
+      </select>
+    </div>
+    <button
+      type="button"
+      class="ps__export"
+      (click)="exportExcel()"
+      [disabled]="rows().length === 0"
+    >
+      <span class="material-icons">download</span>
+      Excel İndir
+    </button>
+    <p class="ps__hint">
+      <span class="material-icons">info</span>
+      Tablo <strong>vade tarihine</strong> göre gruplanır — fatura tarihine değil.
+    </p>
+  </div>
+
+  <!-- Top KPI cards -->
+  <div class="ps__kpis">
+    <div class="ps__kpi ps__kpi--g">
+      <span>Yıllık Tahsilat</span>
+      <strong>{{ gelirAnnual() | currencyTry }}</strong>
+      @if (gelirPending() > 0) {
+        <small>Bekleyen: {{ gelirPending() | currencyTry }}</small>
+      }
+    </div>
+    <div class="ps__kpi ps__kpi--r">
+      <span>Yıllık Ödeme</span>
+      <strong>{{ giderAnnual() | currencyTry }}</strong>
+      @if (giderPending() > 0) {
+        <small>Bekleyen: {{ giderPending() | currencyTry }}</small>
+      }
+    </div>
+    <div class="ps__kpi" [class.ps__kpi--g]="netAnnual() >= 0" [class.ps__kpi--r]="netAnnual() < 0">
+      <span>Net (Tahsilat − Ödeme)</span>
+      <strong>{{ netAnnual() | currencyTry }}</strong>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="ps__loading"><span class="material-icons spin">refresh</span> Yükleniyor…</div>
+  } @else if (rows().length === 0) {
+    <div class="ps__empty">
+      <span class="material-icons">event</span>
+      <p>Bu yıl için işlem bulunamadı.</p>
+    </div>
+  } @else {
+    <div class="ps__table-wrapper">
+      <table class="ps__table">
+        <thead>
+          <tr>
+            <th class="ps__th-code">Kod</th>
+            <th class="ps__th-name">Hesap</th>
+            @for (m of monthLabels; track m) { <th class="num">{{ m }}</th> }
+            <th class="num ps__th-total">Yıllık</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- GELİR section -->
+          @if (gelirRows().length > 0) {
+            <tr class="ps__section ps__section--g">
+              <td colspan="15">TAHSİLAT (GELİR)</td>
+            </tr>
+            @for (r of gelirRows(); track r.code) {
+              <tr>
+                <td><code>{{ r.code }}</code></td>
+                <td>{{ r.name }}</td>
+                @for (v of r.monthly; track $index) {
+                  <td class="num" [class.has-pending]="hasPending(r, $index)" [title]="hasPending(r, $index) ? 'Bekleyen: ' + (r.monthlyPending[$index] | currencyTry) : ''">
+                    @if (v !== 0) {
+                      {{ v | currencyTry }}
+                    } @else { — }
+                    @if (hasPending(r, $index)) {
+                      <span class="dot" [style.opacity]="0.3 + pendingPctOf(r, $index) / 200"></span>
+                    }
+                  </td>
+                }
+                <td class="num ps__total-cell">{{ r.total | currencyTry }}</td>
+              </tr>
+            }
+            <tr class="ps__subtotal ps__subtotal--g">
+              <td colspan="2">Tahsilat Toplam</td>
+              @for (v of gelirMonthTotals(); track $index) {
+                <td class="num">{{ v | currencyTry }}</td>
+              }
+              <td class="num ps__total-cell">{{ gelirAnnual() | currencyTry }}</td>
+            </tr>
+          }
+
+          <!-- GİDER section -->
+          @if (giderRows().length > 0) {
+            <tr class="ps__section ps__section--r">
+              <td colspan="15">ÖDEME (GİDER)</td>
+            </tr>
+            @for (r of giderRows(); track r.code) {
+              <tr>
+                <td><code>{{ r.code }}</code></td>
+                <td>{{ r.name }}</td>
+                @for (v of r.monthly; track $index) {
+                  <td class="num" [class.has-pending]="hasPending(r, $index)" [title]="hasPending(r, $index) ? 'Bekleyen: ' + (r.monthlyPending[$index] | currencyTry) : ''">
+                    @if (v !== 0) {
+                      {{ v | currencyTry }}
+                    } @else { — }
+                    @if (hasPending(r, $index)) {
+                      <span class="dot" [style.opacity]="0.3 + pendingPctOf(r, $index) / 200"></span>
+                    }
+                  </td>
+                }
+                <td class="num ps__total-cell">{{ r.total | currencyTry }}</td>
+              </tr>
+            }
+            <tr class="ps__subtotal ps__subtotal--r">
+              <td colspan="2">Ödeme Toplam</td>
+              @for (v of giderMonthTotals(); track $index) {
+                <td class="num">{{ v | currencyTry }}</td>
+              }
+              <td class="num ps__total-cell">{{ giderAnnual() | currencyTry }}</td>
+            </tr>
+          }
+
+          <!-- NET row -->
+          <tr class="ps__net">
+            <td colspan="2">NET (Tahsilat − Ödeme)</td>
+            @for (v of netMonthTotals(); track $index) {
+              <td class="num" [class.pos]="v >= 0" [class.neg]="v < 0">
+                {{ v | currencyTry }}
+              </td>
+            }
+            <td class="num ps__total-cell" [class.pos]="netAnnual() >= 0" [class.neg]="netAnnual() < 0">
+              {{ netAnnual() | currencyTry }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  }
+}
