@@ -1,0 +1,66 @@
+<app-page-header
+  title="Gider Dağılımı"
+  [subtitle]="(activeFirm()?.name ?? 'Firma seçilmedi') + ' • ' + selectedYear()"
+/>
+
+@if (!activeFirm()) {
+  <div class="eb__empty">
+    <span class="material-icons">business</span>
+    <p>Devam etmek için üst menüden bir firma seçin.</p>
+  </div>
+} @else {
+  <div class="eb__toolbar">
+    <div class="eb__control">
+      <label>Yıl</label>
+      <select [ngModel]="selectedYear()" (ngModelChange)="onYearChange($event)">
+        @for (y of yearOptions; track y) { <option [value]="y">{{ y }}</option> }
+      </select>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="eb__loading"><span class="material-icons spin">refresh</span> Yükleniyor…</div>
+  } @else if (slices().length === 0) {
+    <div class="eb__empty">
+      <span class="material-icons">pie_chart</span>
+      <p>Bu yıl için gider verisi bulunamadı.</p>
+    </div>
+  } @else {
+    <div class="eb__layout">
+      <div class="eb__chart-card">
+        <div class="eb__chart-wrap">
+          <canvas baseChart
+            [data]="chartData()"
+            [options]="chartOptions"
+            type="doughnut">
+          </canvas>
+        </div>
+        <div class="eb__total">
+          <span>Toplam Gider</span>
+          <strong>{{ total() | currencyTry }}</strong>
+        </div>
+      </div>
+
+      <div class="eb__list-card">
+        <table class="eb__list">
+          <thead>
+            <tr><th>#</th><th>Hesap</th><th class="num">Tutar</th><th class="num">%</th></tr>
+          </thead>
+          <tbody>
+            @for (s of slices(); track s.code; let i = $index) {
+              <tr>
+                <td><span class="eb__dot" [style.background]="colorFor(i)"></span></td>
+                <td>
+                  <code>{{ s.code }}</code>
+                  <span>{{ s.name }}</span>
+                </td>
+                <td class="num">{{ s.amount | currencyTry }}</td>
+                <td class="num">{{ s.percent.toFixed(1) }}%</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+}

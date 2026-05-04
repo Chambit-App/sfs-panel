@@ -1,0 +1,79 @@
+<app-page-header
+  title="Cari Yaşlandırma Raporu"
+  [subtitle]="activeFirm()?.name ?? 'Firma seçilmedi'"
+/>
+
+@if (!activeFirm()) {
+  <div class="aging__empty">
+    <span class="material-icons">business</span>
+    <p>Devam etmek için üst menüden bir firma seçin.</p>
+  </div>
+} @else {
+  <div class="aging__toolbar">
+    <div class="aging__control">
+      <label>Cari Tipi</label>
+      <select [ngModel]="filterType()" (ngModelChange)="filterType.set($event)">
+        <option value="ALL">Tümü</option>
+        <option value="MUSTERI">Müşteri (Alacak)</option>
+        <option value="TEDARIKCI">Tedarikçi (Borç)</option>
+      </select>
+    </div>
+    <p class="aging__hint">
+      <span class="material-icons">info</span>
+      Yaşlandırma sadece <strong>BEKLİYOR</strong> durumdaki işlemler üzerinden hesaplanır.
+    </p>
+  </div>
+
+  @if (loading()) {
+    <div class="aging__loading"><span class="material-icons spin">refresh</span> Yükleniyor…</div>
+  } @else if (filtered().length === 0) {
+    <div class="aging__empty">
+      <span class="material-icons">check_circle</span>
+      <p>Bekleyen işlem bulunamadı.</p>
+    </div>
+  } @else {
+    <div class="aging__totals">
+      <div class="aging__total"><span>Vadesi Gelmemiş</span><strong>{{ totals().current | currencyTry }}</strong></div>
+      <div class="aging__total aging__total--y"><span>0–30 Gün</span><strong>{{ totals().d0_30 | currencyTry }}</strong></div>
+      <div class="aging__total aging__total--o"><span>31–60 Gün</span><strong>{{ totals().d31_60 | currencyTry }}</strong></div>
+      <div class="aging__total aging__total--r"><span>61–90 Gün</span><strong>{{ totals().d61_90 | currencyTry }}</strong></div>
+      <div class="aging__total aging__total--rd"><span>90+ Gün</span><strong>{{ totals().d90_plus | currencyTry }}</strong></div>
+      <div class="aging__total aging__total--sum"><span>TOPLAM</span><strong>{{ totals().total | currencyTry }}</strong></div>
+    </div>
+
+    <div class="aging__table-wrapper">
+      <table class="aging__table">
+        <thead>
+          <tr>
+            <th>Cari</th>
+            <th>Tip</th>
+            <th class="num">Vadesi Gelmemiş</th>
+            <th class="num">0–30 Gün</th>
+            <th class="num">31–60 Gün</th>
+            <th class="num">61–90 Gün</th>
+            <th class="num">90+ Gün</th>
+            <th class="num">Toplam</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of filtered(); track r.cari_id) {
+            <tr>
+              <td>{{ r.cari_name }}</td>
+              <td>
+                <span class="badge" [class.badge--m]="r.cari_type === 'MUSTERI'" [class.badge--t]="r.cari_type === 'TEDARIKCI'">
+                  {{ r.cari_type === 'MUSTERI' ? 'Müşteri' : 'Tedarikçi' }}
+                </span>
+              </td>
+              <td class="num">{{ r.current ? (r.current | currencyTry) : '—' }}</td>
+              <td class="num cell--y">{{ r.d0_30 ? (r.d0_30 | currencyTry) : '—' }}</td>
+              <td class="num cell--o">{{ r.d31_60 ? (r.d31_60 | currencyTry) : '—' }}</td>
+              <td class="num cell--r">{{ r.d61_90 ? (r.d61_90 | currencyTry) : '—' }}</td>
+              <td class="num cell--rd">{{ r.d90_plus ? (r.d90_plus | currencyTry) : '—' }}</td>
+              <td class="num total"><strong>{{ r.total | currencyTry }}</strong></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}

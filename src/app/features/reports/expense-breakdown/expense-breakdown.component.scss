@@ -1,0 +1,54 @@
+.eb {
+  &__empty, &__loading {
+    text-align: center; padding: 48px 24px; color: var(--color-text-muted, #9ca3af);
+    .material-icons { font-size: 48px; display: block; margin: 0 auto 12px; }
+  }
+
+  &__toolbar { margin-bottom: 16px; }
+
+  &__control {
+    display: inline-flex; flex-direction: column; gap: 4px;
+    label { font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; }
+    select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; min-width: 160px; background: #fff; }
+  }
+
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    @media (max-width: 1000px) { grid-template-columns: 1fr; }
+  }
+
+  &__chart-card, &__list-card {
+    background: #fff; border: 1px solid #f0f0f0; border-radius: 10px; padding: 16px;
+  }
+
+  &__chart-wrap {
+    position: relative;
+    height: 380px;
+  }
+
+  &__total {
+    display: flex; flex-direction: column; align-items: center; padding-top: 12px;
+    span { font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; }
+    strong { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  }
+
+  &__list {
+    width: 100%; border-collapse: collapse; font-size: 0.875rem;
+    th, td { padding: 6px 8px; border-bottom: 1px solid #f5f5f5; text-align: left; vertical-align: middle; }
+    th { background: rgba(0, 0, 0, 0.02); font-weight: 600; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    code { background: rgba(0, 0, 0, 0.04); padding: 1px 5px; border-radius: 3px; font-size: 0.75rem; margin-right: 6px; }
+  }
+
+  &__dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+}
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

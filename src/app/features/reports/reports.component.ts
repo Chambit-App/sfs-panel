@@ -8,7 +8,19 @@ import {
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BaseChartDirective } from 'ng2-charts';
-import { ChartConfiguration, ChartData } from 'chart.js';
+import {
+  Chart,
+  ChartConfiguration,
+  ChartData,
+  BarController,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+
+Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card/kpi-card.component';
