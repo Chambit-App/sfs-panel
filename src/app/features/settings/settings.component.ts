@@ -383,6 +383,12 @@ export class SettingsComponent {
   showUserDeleteDialog = signal(false);
   userDeleteTargetId = signal<string | null>(null);
 
+  // Edit dialog state
+  showUserEditDialog = signal(false);
+  userEditTarget = signal<AppUser | null>(null);
+  editPasswordValue = signal<string>('');
+  editPasswordSaving = signal(false);
+
   readonly roleLabels: Record<UserRole, string> = {
     super_admin: 'Süper Admin',
     tenant_admin: 'Tenant Yöneticisi',
@@ -402,17 +408,36 @@ export class SettingsComponent {
     role: ['viewer' as UserRole, Validators.required],
   });
 
+  editUserForm = this.fb.group({
+    full_name: ['', [Validators.required, Validators.minLength(2)]],
+    tenant_id: ['', Validators.required],
+    firm_id: [''],
+    role: ['viewer' as UserRole, Validators.required],
+    is_active: [true],
+    is_super_admin: [false],
+  });
+
   async loadUsers(): Promise<void> {
-    const tenant = this.tenantService.activeTenant();
-    if (!tenant) { this.users.set([]); return; }
     this.loading.set(true);
     try {
-      this.users.set(await this.settingsService.getUsers(tenant.id));
+      this.users.set(await this.settingsService.getAllUsers());
     } catch {
       this.notificationService.error('Kullanıcılar yüklenirken hata oluştu.');
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /** True if the user being edited is the only remaining super admin. */
+  isLastSuperAdmin(target: AppUser | null): boolean {
+    if (!target?.is_super_admin) return false;
+    return this.users().filter(u => u.is_super_admin).length === 1;
+  }
+
+  getTenantName(tenantId: string | null): string {
+    if (!tenantId) return '—';
+    const t = this.tenants().find(x => x.id === tenantId);
+    return t?.name ?? '—';
   }
 
   async onRoleChange(user: AppUser, event: Event): Promise<void> {
@@ -453,6 +478,100 @@ export class SettingsComponent {
     const tenantId = this.userForm.get('tenant_id')?.value;
     if (!tenantId) return [];
     return this.firms().filter(f => (f as any).tenant_id === tenantId);
+  }
+
+  // Firms for the selected tenant in edit form
+  get editUserFormFirms(): Firm[] {
+    const tenantId = this.editUserForm.get('tenant_id')?.value;
+    if (!tenantId) return [];
+    return this.firms().filter(f => (f as any).tenant_id === tenantId);
+  }
+
+  openEditUser(user: AppUser): void {
+    this.userEditTarget.set(user);
+    this.editUserForm.reset({
+      full_name: user.full_name,
+      tenant_id: user.tenant_id ?? '',
+      firm_id: user.firm_id ?? '',
+      role: user.role,
+      is_active: user.is_active,
+      is_super_admin: user.is_super_admin,
+    });
+    this.editPasswordValue.set('');
+    this.showUserEditDialog.set(true);
+  }
+
+  cancelEditUser(): void {
+    this.showUserEditDialog.set(false);
+    this.userEditTarget.set(null);
+    this.editUserForm.reset();
+    this.editPasswordValue.set('');
+  }
+
+  async saveEditUser(): Promise<void> {
+    const target = this.userEditTarget();
+    if (!target) return;
+    if (this.editUserForm.invalid) {
+      this.editUserForm.markAllAsTouched();
+      return;
+    }
+    const val = this.editUserForm.value;
+
+    // Last super admin guard (client-side; server also enforces)
+    if (target.is_super_admin && val.is_super_admin === false && this.isLastSuperAdmin(target)) {
+      this.notificationService.error('Son süper admin yetkisi kaldırılamaz.');
+      return;
+    }
+
+    this.userSavingId.set(target.id);
+    try {
+      await this.settingsService.updateUser({
+        user_id: target.id,
+        profile: {
+          full_name: val.full_name ?? undefined,
+          tenant_id: val.tenant_id || null,
+          firm_id: val.firm_id || null,
+          role: val.role as UserRole,
+          is_active: val.is_active ?? undefined,
+          is_super_admin: val.is_super_admin ?? undefined,
+        },
+      });
+      this.notificationService.success('Kullanıcı bilgileri güncellendi.');
+      this.showUserEditDialog.set(false);
+      this.userEditTarget.set(null);
+      await this.loadUsers();
+    } catch (e: any) {
+      this.notificationService.error(e?.message || 'Kullanıcı güncellenirken hata oluştu.');
+    } finally {
+      this.userSavingId.set(null);
+    }
+  }
+
+  async resetPassword(): Promise<void> {
+    const target = this.userEditTarget();
+    if (!target) return;
+    const newPassword = this.editPasswordValue().trim();
+    if (newPassword.length < 6) {
+      this.notificationService.error('Şifre en az 6 karakter olmalıdır.');
+      return;
+    }
+    this.editPasswordSaving.set(true);
+    try {
+      await this.settingsService.updateUser({
+        user_id: target.id,
+        password: newPassword,
+      });
+      this.notificationService.success(`${target.full_name} için şifre güncellendi.`);
+      this.editPasswordValue.set('');
+    } catch (e: any) {
+      this.notificationService.error(e?.message || 'Şifre güncellenemedi.');
+    } finally {
+      this.editPasswordSaving.set(false);
+    }
+  }
+
+  onEditPasswordChange(event: Event): void {
+    this.editPasswordValue.set((event.target as HTMLInputElement).value);
   }
 
   openNewUser(): void {
