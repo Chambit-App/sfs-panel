@@ -5,7 +5,7 @@
 
 @if (!isSuperAdmin()) {
   <div class="access-denied">
-    <span class="access-denied__icon">&#128274;</span>
+    <span class="material-icons access-denied__icon">lock</span>
     <h3>Erişim Reddedildi</h3>
     <p>Bu sayfaya erişmek için süper admin yetkisi gereklidir.</p>
   </div>
@@ -15,38 +15,43 @@
   <div class="settings-tabs">
     <button
       class="settings-tabs__tab"
-      [class.settings-tabs__tab--active]="activeTab() === 'tenants'"
-      (click)="setTab('tenants')"
-    >
-      <span class="tab-icon material-icons" style="font-size:16px">domain</span> Gruplar
-    </button>
-    <button
-      class="settings-tabs__tab"
       [class.settings-tabs__tab--active]="activeTab() === 'categories'"
       (click)="setTab('categories')"
     >
-      <span class="tab-icon">&#9776;</span> Kategoriler
+      <span class="material-icons settings-tabs__icon">category</span>
+      <span class="settings-tabs__label">Kategoriler</span>
     </button>
     <button
       class="settings-tabs__tab"
       [class.settings-tabs__tab--active]="activeTab() === 'chart'"
       (click)="setTab('chart')"
     >
-      <span class="tab-icon">&#128196;</span> Hesap Planı
+      <span class="material-icons settings-tabs__icon">account_tree</span>
+      <span class="settings-tabs__label">Hesap Planı</span>
     </button>
     <button
       class="settings-tabs__tab"
       [class.settings-tabs__tab--active]="activeTab() === 'firms'"
       (click)="setTab('firms')"
     >
-      <span class="tab-icon">&#127970;</span> Firma Yönetimi
+      <span class="material-icons settings-tabs__icon">business</span>
+      <span class="settings-tabs__label">Firmalar</span>
+    </button>
+    <button
+      class="settings-tabs__tab"
+      [class.settings-tabs__tab--active]="activeTab() === 'tenants'"
+      (click)="setTab('tenants')"
+    >
+      <span class="material-icons settings-tabs__icon">groups</span>
+      <span class="settings-tabs__label">Gruplar</span>
     </button>
     <button
       class="settings-tabs__tab"
       [class.settings-tabs__tab--active]="activeTab() === 'users'"
       (click)="setTab('users')"
     >
-      <span class="tab-icon">&#128100;</span> Kullanıcılar
+      <span class="material-icons settings-tabs__icon">person</span>
+      <span class="settings-tabs__label">Kullanıcılar</span>
     </button>
   </div>
 
@@ -257,10 +262,14 @@
                   </td>
                   <td class="actions-cell">
                     <button class="btn-action btn-action--toggle" (click)="toggleCategoryActive(cat)" [title]="cat.is_active ? 'Pasif Yap' : 'Aktif Yap'">
-                      {{ cat.is_active ? '&#9724;' : '&#9723;' }}
+                      <span class="material-icons">{{ cat.is_active ? 'toggle_on' : 'toggle_off' }}</span>
                     </button>
-                    <button class="btn-action btn-action--edit" (click)="editCategory(cat)" title="Düzenle">&#9998;</button>
-                    <button class="btn-action btn-action--delete" (click)="confirmDeleteCategory(cat.id)" title="Sil">&#128465;</button>
+                    <button class="btn-action btn-action--edit" (click)="editCategory(cat)" title="Düzenle">
+                      <span class="material-icons">edit</span>
+                    </button>
+                    <button class="btn-action btn-action--delete" (click)="confirmDeleteCategory(cat.id)" title="Sil">
+                      <span class="material-icons">delete</span>
+                    </button>
                   </td>
                 </tr>
               } @empty {
@@ -345,7 +354,8 @@
           <button class="filter-pill filter-pill--gider" [class.filter-pill--active]="chartFilterType() === 'GIDER'" (click)="chartFilterType.set('GIDER')">Gider</button>
         </div>
         <button class="sort-btn" (click)="toggleChartSort()" title="Koda göre sırala">
-          Hesap Kodu {{ chartSortAsc() ? '&#8593;' : '&#8595;' }}
+          <span>Hesap Kodu</span>
+          <span class="material-icons sort-btn__icon">{{ chartSortAsc() ? 'arrow_upward' : 'arrow_downward' }}</span>
         </button>
         <span class="record-count">{{ filteredChartAccounts().length }} kayıt</span>
       </div>
@@ -389,10 +399,14 @@
                   </td>
                   <td class="actions-cell">
                     <button class="btn-action btn-action--toggle" (click)="toggleChartActive(acc)" [title]="acc.is_active ? 'Pasif Yap' : 'Aktif Yap'">
-                      {{ acc.is_active ? '&#9724;' : '&#9723;' }}
+                      <span class="material-icons">{{ acc.is_active ? 'toggle_on' : 'toggle_off' }}</span>
                     </button>
-                    <button class="btn-action btn-action--edit" (click)="editChartAccount(acc)" title="Düzenle">&#9998;</button>
-                    <button class="btn-action btn-action--delete" (click)="confirmDeleteChart(acc.id)" title="Sil">&#128465;</button>
+                    <button class="btn-action btn-action--edit" (click)="editChartAccount(acc)" title="Düzenle">
+                      <span class="material-icons">edit</span>
+                    </button>
+                    <button class="btn-action btn-action--delete" (click)="confirmDeleteChart(acc.id)" title="Sil">
+                      <span class="material-icons">delete</span>
+                    </button>
                   </td>
                 </tr>
               } @empty {
@@ -522,9 +536,11 @@
                   </td>
                   <td class="actions-cell">
                     <button class="btn-action btn-action--toggle" (click)="toggleFirmActive(firm)" [title]="$any(firm).is_active !== false ? 'Pasif Yap' : 'Aktif Yap'">
-                      {{ $any(firm).is_active !== false ? '&#9724;' : '&#9723;' }}
+                      <span class="material-icons">{{ $any(firm).is_active !== false ? 'toggle_on' : 'toggle_off' }}</span>
                     </button>
-                    <button class="btn-action btn-action--edit" (click)="editFirm(firm)" title="Düzenle">&#9998;</button>
+                    <button class="btn-action btn-action--edit" (click)="editFirm(firm)" title="Düzenle">
+                      <span class="material-icons">edit</span>
+                    </button>
                   </td>
                 </tr>
               } @empty {
