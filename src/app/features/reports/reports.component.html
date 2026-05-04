@@ -54,6 +54,15 @@
           }
         </select>
       </div>
+      <button
+        type="button"
+        class="reports__export"
+        (click)="exportExcel()"
+        [disabled]="monthlyRows().length === 0"
+      >
+        <span class="material-icons">download</span>
+        Excel İndir
+      </button>
     </div>
 
     <!-- KPI Row -->
@@ -249,6 +258,15 @@
           }
         </select>
       </div>
+      <button
+        type="button"
+        class="reports__export"
+        (click)="exportExcel()"
+        [disabled]="yoyRows().length === 0"
+      >
+        <span class="material-icons">download</span>
+        Excel İndir
+      </button>
     </div>
 
     @if (yoyRows().length === 0) {

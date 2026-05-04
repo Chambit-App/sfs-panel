@@ -10,6 +10,7 @@
     display: flex;
     gap: 16px;
     flex-wrap: wrap;
+    align-items: flex-end;
     margin-bottom: 16px;
   }
 
@@ -25,6 +26,21 @@
       background: #fff;
       min-width: 160px;
     }
+  }
+
+  &__export {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; background: #fff; border: 1px solid #d1d5db; border-radius: 6px;
+    color: var(--color-text-primary); cursor: pointer; font-size: 0.875rem; font-weight: 500;
+    height: fit-content;
+
+    &:hover:not(:disabled) {
+      background: rgba(0, 0, 0, 0.03);
+      border-color: var(--color-accent, #e94560);
+      color: var(--color-accent, #e94560);
+    }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+    .material-icons { font-size: 18px; }
   }
 
   &__totals {

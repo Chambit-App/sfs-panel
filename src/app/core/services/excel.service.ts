@@ -249,6 +249,27 @@ export class ExcelService {
     });
   }
 
+  /**
+   * Lightweight export for ad-hoc report tables. Pass column key/label
+   * pairs and the data rows. Numbers are written as numbers, dates as
+   * ISO strings, everything else as text.
+   */
+  exportTable(
+    sheetName: string,
+    columns: { key: string; label: string }[],
+    rows: Record<string, unknown>[],
+  ): Blob {
+    const headers = columns.map(c => c.label);
+    const data = rows.map(r => columns.map(c => r[c.key] ?? ''));
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    return new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+  }
+
   download(blob: Blob, fileName: string): void {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

@@ -4,12 +4,30 @@
     .material-icons { font-size: 48px; display: block; margin: 0 auto 12px; }
   }
 
-  &__toolbar { margin-bottom: 16px; }
+  &__toolbar {
+    display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
 
   &__control {
     display: inline-flex; flex-direction: column; gap: 4px;
     label { font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; }
     select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; min-width: 220px; background: #fff; }
+  }
+
+  &__export {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; background: #fff; border: 1px solid #d1d5db; border-radius: 6px;
+    color: var(--color-text-primary); cursor: pointer; font-size: 0.875rem; font-weight: 500;
+    height: fit-content;
+
+    &:hover:not(:disabled) {
+      background: rgba(0, 0, 0, 0.03);
+      border-color: var(--color-accent, #e94560);
+      color: var(--color-accent, #e94560);
+    }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+    .material-icons { font-size: 18px; }
   }
 
   &__totals {

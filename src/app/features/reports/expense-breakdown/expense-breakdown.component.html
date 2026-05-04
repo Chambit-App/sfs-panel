@@ -16,6 +16,15 @@
         @for (y of yearOptions; track y) { <option [value]="y">{{ y }}</option> }
       </select>
     </div>
+    <button
+      type="button"
+      class="eb__export"
+      (click)="exportExcel()"
+      [disabled]="slices().length === 0"
+    >
+      <span class="material-icons">download</span>
+      Excel İndir
+    </button>
   </div>
 
   @if (loading()) {

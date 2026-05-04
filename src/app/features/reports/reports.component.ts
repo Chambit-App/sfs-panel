@@ -28,6 +28,7 @@ import { CurrencyTryPipe } from '../../shared/pipes/currency-try.pipe';
 import { TenantService } from '../../core/services/tenant.service';
 import { ReportsService, MonthlyReportRow, YoYReportRow } from './reports.service';
 import { AmountCellPipe } from './amount-cell.pipe';
+import { ExcelService } from '../../core/services/excel.service';
 
 const MONTHS_SHORT = [
   'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz',
@@ -55,6 +56,7 @@ type TabId = 'monthly' | 'yoy';
 export class ReportsComponent {
   private tenantService = inject(TenantService);
   private reportsService = inject(ReportsService);
+  private excel = inject(ExcelService);
 
   // ── Constants ─────────────────────────────────────────────────────────────
   readonly MONTHS_SHORT = MONTHS_SHORT;
@@ -262,5 +264,60 @@ export class ReportsComponent {
         },
       ],
     });
+  }
+
+  exportExcel(): void {
+    if (this.activeTab() === 'monthly') {
+      this.exportMonthly();
+    } else {
+      this.exportYoY();
+    }
+  }
+
+  private exportMonthly(): void {
+    const cols = [
+      { key: 'kod', label: 'Kod' },
+      { key: 'hesap', label: 'Hesap' },
+      { key: 'tip', label: 'Tip' },
+      ...MONTHS_SHORT.map((m, i) => ({ key: `m${i}`, label: m })),
+      { key: 'toplam', label: 'Yıllık Toplam' },
+    ];
+    const data = this.monthlyRows().map(r => {
+      const row: Record<string, unknown> = {
+        kod: r.code,
+        hesap: r.name,
+        tip: r.type,
+        toplam: r.total,
+      };
+      r.months.forEach((v, i) => { row[`m${i}`] = v; });
+      return row;
+    });
+    const blob = this.excel.exportTable('Aylık Gelir-Gider', cols, data);
+    this.excel.download(blob, `gelir_gider_${this.selectedYear()}.xlsx`);
+  }
+
+  private exportYoY(): void {
+    const y1 = this.yoyYear1();
+    const y2 = this.yoyYear2();
+    const cols = [
+      { key: 'kod', label: 'Kod' },
+      { key: 'hesap', label: 'Hesap' },
+      { key: 'tip', label: 'Tip' },
+      { key: 'y1_total', label: `${y1} Toplam` },
+      { key: 'y2_total', label: `${y2} Toplam` },
+      { key: 'fark', label: 'Fark' },
+      { key: 'fark_yuzde', label: 'Fark (%)' },
+    ];
+    const data = this.yoyRows().map(r => ({
+      kod: r.code,
+      hesap: r.name,
+      tip: r.type,
+      y1_total: r.year1Total,
+      y2_total: r.year2Total,
+      fark: r.diff,
+      fark_yuzde: r.diffPct === null ? '' : Number(r.diffPct.toFixed(2)),
+    }));
+    const blob = this.excel.exportTable('Yıllık Karşılaştırma', cols, data);
+    this.excel.download(blob, `gelir_gider_yoy_${y1}_${y2}.xlsx`);
   }
 }

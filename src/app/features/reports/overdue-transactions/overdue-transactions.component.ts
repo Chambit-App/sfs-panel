@@ -6,6 +6,7 @@ import { CurrencyTryPipe } from '../../../shared/pipes/currency-try.pipe';
 import { TurkishDatePipe } from '../../../shared/pipes/turkish-date.pipe';
 import { TenantService } from '../../../core/services/tenant.service';
 import { ReportsService, OverdueRow } from '../reports.service';
+import { ExcelService } from '../../../core/services/excel.service';
 
 type TypeFilter = 'ALL' | 'GELIR' | 'GIDER';
 
@@ -19,6 +20,7 @@ type TypeFilter = 'ALL' | 'GELIR' | 'GIDER';
 export class OverdueTransactionsComponent {
   private tenantService = inject(TenantService);
   private reportsService = inject(ReportsService);
+  private excel = inject(ExcelService);
 
   activeFirm = this.tenantService.activeFirm;
   loading = signal(false);
@@ -65,5 +67,34 @@ export class OverdueTransactionsComponent {
     if (days <= 60) return 'bucket bucket--o';
     if (days <= 90) return 'bucket bucket--r';
     return 'bucket bucket--rd';
+  }
+
+  exportExcel(): void {
+    const data = this.filtered().map(r => ({
+      tip: r.type === 'GELIR' ? 'Tahsilat' : 'Ödeme',
+      cari: r.cari_name,
+      cari_tipi: r.cari_type === 'MUSTERI' ? 'Müşteri' : 'Tedarikçi',
+      fatura_no: r.invoice_no,
+      vade_tarihi: r.due_date,
+      gecikme_gun: r.days_late,
+      tutar: r.amount,
+      aciklama: r.description,
+    }));
+    const blob = this.excel.exportTable(
+      'Geciken İşlemler',
+      [
+        { key: 'tip', label: 'Tip' },
+        { key: 'cari', label: 'Cari' },
+        { key: 'cari_tipi', label: 'Cari Tipi' },
+        { key: 'fatura_no', label: 'Fatura No' },
+        { key: 'vade_tarihi', label: 'Vade Tarihi' },
+        { key: 'gecikme_gun', label: 'Gecikme (Gün)' },
+        { key: 'tutar', label: 'Tutar' },
+        { key: 'aciklama', label: 'Açıklama' },
+      ],
+      data,
+    );
+    const stamp = new Date().toISOString().split('T')[0];
+    this.excel.download(blob, `geciken_islemler_${stamp}.xlsx`);
   }
 }
