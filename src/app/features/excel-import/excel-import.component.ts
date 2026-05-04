@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -7,6 +7,9 @@ import {
   EntitySchema,
   getSchemaByKey,
   ParsedRow,
+  CariRef,
+  CategoryRef,
+  BankRef,
 } from '../../core/services/excel.service';
 import { TenantService } from '../../core/services/tenant.service';
 import { SupabaseService } from '../../core/services/supabase.service';
@@ -45,12 +48,26 @@ export class ExcelImportComponent {
   parsedRows = signal<ParsedRow[]>([]);
   parsing = signal(false);
   uploading = signal(false);
+  buildingTemplate = signal(false);
+
+  // Live lookup data for payments template
+  paymentsCariler = signal<CariRef[]>([]);
+  paymentsCategories = signal<CategoryRef[]>([]);
+  paymentsBanks = signal<BankRef[]>([]);
+  lookupsLoadedAt = signal<Date | null>(null);
+  loadingLookups = signal(false);
 
   validCount = computed(() => this.parsedRows().filter(r => r.isValid).length);
   invalidCount = computed(() => this.parsedRows().filter(r => !r.isValid).length);
   hasFile = computed(() => this.parsedRows().length > 0);
   activeFirm = this.tenant.activeFirm;
   returnRoute = computed(() => ENTITY_TO_RETURN_ROUTE[this.entityKey()] ?? '/');
+  isPayments = computed(() => this.entityKey() === 'payments');
+  lookupsAge = computed(() => {
+    const t = this.lookupsLoadedAt();
+    if (!t) return '';
+    return t.toLocaleString('tr-TR');
+  });
 
   constructor() {
     this.route.data.subscribe(data => {
@@ -58,11 +75,88 @@ export class ExcelImportComponent {
       this.entityKey.set(key);
       this.schema.set(getSchemaByKey(key));
     });
+
+    // Auto-load payments lookups when firm + entity = payments
+    effect(() => {
+      const firm = this.activeFirm();
+      if (firm && this.isPayments()) {
+        this.refreshLookups(firm.id);
+      }
+    });
   }
 
-  downloadTemplate(): void {
+  async refreshLookups(firmId: string): Promise<void> {
+    this.loadingLookups.set(true);
+    try {
+      const [cariRes, catRes, bankRes] = await Promise.all([
+        this.supabase.client
+          .from('cari_accounts')
+          .select('id, name, type')
+          .eq('firm_id', firmId)
+          .eq('is_active', true)
+          .order('name'),
+        this.supabase.client
+          .from('category_items')
+          .select('id, name, type')
+          .eq('firm_id', firmId)
+          .eq('is_active', true)
+          .order('name'),
+        this.supabase.client
+          .from('bank_accounts')
+          .select('id, bank_name')
+          .eq('firm_id', firmId)
+          .eq('is_active', true)
+          .order('bank_name'),
+      ]);
+
+      this.paymentsCariler.set((cariRes.data ?? []) as CariRef[]);
+      this.paymentsCategories.set((catRes.data ?? []) as CategoryRef[]);
+      this.paymentsBanks.set(
+        ((bankRes.data ?? []) as Array<{ id: string; bank_name: string }>).map(b => ({
+          id: b.id,
+          name: b.bank_name,
+        })),
+      );
+      this.lookupsLoadedAt.set(new Date());
+    } catch (err) {
+      console.error(err);
+      this.notify.error('Referans veriler yüklenemedi.');
+    } finally {
+      this.loadingLookups.set(false);
+    }
+  }
+
+  async downloadTemplate(): Promise<void> {
     const s = this.schema();
     if (!s) return;
+
+    if (this.isPayments()) {
+      const firm = this.activeFirm();
+      if (!firm) {
+        this.notify.error('Önce üst menüden bir firma seçin.');
+        return;
+      }
+      this.buildingTemplate.set(true);
+      try {
+        await this.refreshLookups(firm.id);
+        const blob = await this.excel.buildPaymentsTemplate({
+          cariler: this.paymentsCariler(),
+          categories: this.paymentsCategories(),
+          banks: this.paymentsBanks(),
+          generatedAt: new Date(),
+          firmName: firm.name,
+        });
+        const stamp = new Date().toISOString().split('T')[0];
+        this.excel.download(blob, `odemeler_sablon_${stamp}.xlsx`);
+      } catch (err) {
+        console.error(err);
+        this.notify.error('Şablon oluşturulamadı: ' + (err as Error).message);
+      } finally {
+        this.buildingTemplate.set(false);
+      }
+      return;
+    }
+
     const blob = this.excel.buildTemplate(s);
     this.excel.download(blob, `${s.entity}_sablon.xlsx`);
   }

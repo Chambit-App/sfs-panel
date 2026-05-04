@@ -22,9 +22,55 @@
         boş şablonu indirip üzerine doldurmak en kolayı.
       </p>
 
-      <button class="btn btn--accent" (click)="downloadTemplate()">
-        <span class="material-icons">download</span>
-        Boş Şablon İndir (.xlsx)
+      @if (isPayments()) {
+        <div class="ximp__live-badge">
+          <span class="material-icons">auto_awesome</span>
+          <div>
+            <strong>Akıllı şablon</strong>
+            <small>
+              "Cari Adı / Kategori Adı / Banka Adı" sütunlarında açılır liste,
+              UUID sütunları ise otomatik formülle dolar.
+            </small>
+          </div>
+        </div>
+
+        <div class="ximp__live-stats">
+          <div><strong>{{ paymentsCariler().length }}</strong><span>Cari</span></div>
+          <div><strong>{{ paymentsCategories().length }}</strong><span>Kategori</span></div>
+          <div><strong>{{ paymentsBanks().length }}</strong><span>Banka</span></div>
+          @if (lookupsAge()) {
+            <div class="ximp__live-stamp">
+              <span class="material-icons">schedule</span>
+              <small>{{ lookupsAge() }}</small>
+            </div>
+          }
+        </div>
+
+        <div class="ximp__warn">
+          <span class="material-icons">warning_amber</span>
+          <small>
+            <strong>Yeni cari, kategori veya banka ekledikten sonra şablonu yeniden indirin.</strong>
+            Şablon yalnızca indirildiği andaki kayıtları içerir; yeni eklenen kayıtlar açılır listede görünmez.
+          </small>
+        </div>
+      }
+
+      <button
+        class="btn btn--accent"
+        (click)="downloadTemplate()"
+        [disabled]="buildingTemplate() || loadingLookups()"
+      >
+        @if (buildingTemplate()) {
+          <span class="material-icons spin">refresh</span>
+          Şablon hazırlanıyor…
+        } @else {
+          <span class="material-icons">download</span>
+          @if (isPayments()) {
+            Güncel Şablonu İndir (.xlsx)
+          } @else {
+            Boş Şablon İndir (.xlsx)
+          }
+        }
       </button>
 
       <h4>Kolonlar</h4>
