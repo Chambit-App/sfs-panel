@@ -1,0 +1,368 @@
+<app-page-header
+  title="Toplu İşlem Yükle (Tahsilat / Ödeme Tablosu)"
+  [subtitle]="activeFirm()?.name ?? 'Firma seçilmedi'"
+/>
+
+@if (!activeFirm()) {
+  <div class="ti__empty">
+    <span class="material-icons">business</span>
+    <p>Devam etmek için üst menüden bir firma seçin.</p>
+  </div>
+} @else {
+
+  <!-- Step indicator -->
+  <ol class="ti__steps">
+    <li [class.ti__steps__item--active]="step() === 1" [class.ti__steps__item--done]="step() > 1">
+      <span class="ti__steps__num">1</span>
+      <span class="ti__steps__label">Dosya Yükle</span>
+    </li>
+    <li [class.ti__steps__item--active]="step() === 2" [class.ti__steps__item--done]="step() > 2">
+      <span class="ti__steps__num">2</span>
+      <span class="ti__steps__label">Kolon Eşleştir</span>
+    </li>
+    <li [class.ti__steps__item--active]="step() === 3" [class.ti__steps__item--done]="step() > 3">
+      <span class="ti__steps__num">3</span>
+      <span class="ti__steps__label">Cari Onay & Önizleme</span>
+    </li>
+    <li [class.ti__steps__item--active]="step() === 4">
+      <span class="ti__steps__num">4</span>
+      <span class="ti__steps__label">Sonuç</span>
+    </li>
+  </ol>
+
+  <!-- ─────────────────────── STEP 1 ─────────────────────── -->
+  @if (step() === 1) {
+    <section class="ti__panel">
+      <h3>Dosya Seç ve Tipi Belirle</h3>
+
+      <div class="ti__direction">
+        <label class="ti__radio" [class.ti__radio--active]="direction() === 'GELIR'">
+          <input type="radio" name="dir" value="GELIR" [checked]="direction() === 'GELIR'" (change)="direction.set('GELIR')" />
+          <span class="material-icons">trending_up</span>
+          <div>
+            <strong>Tahsilat (Gelir)</strong>
+            <small>Müşteriden gelen para. Dosyadaki firmalar müşteri olarak kaydedilir.</small>
+          </div>
+        </label>
+        <label class="ti__radio" [class.ti__radio--active]="direction() === 'GIDER'">
+          <input type="radio" name="dir" value="GIDER" [checked]="direction() === 'GIDER'" (change)="direction.set('GIDER')" />
+          <span class="material-icons">trending_down</span>
+          <div>
+            <strong>Ödeme (Gider)</strong>
+            <small>Tedarikçiye giden para. Dosyadaki firmalar tedarikçi olarak kaydedilir.</small>
+          </div>
+        </label>
+      </div>
+
+      @if (!preview()) {
+        <label class="ti__file-drop">
+          <input type="file" accept=".xlsx,.xls,.csv" (change)="onFileSelected($event)" hidden />
+          <span class="material-icons">cloud_upload</span>
+          <strong>Dosya seç veya buraya sürükle</strong>
+          <small>.xlsx, .xls veya .csv kabul edilir</small>
+          @if (reading()) {
+            <span class="ti__reading"><span class="material-icons spin">refresh</span> Okunuyor…</span>
+          }
+        </label>
+      } @else {
+        <div class="ti__file-info">
+          <span class="material-icons">insert_drive_file</span>
+          <div>
+            <strong>{{ selectedFile()?.name }}</strong>
+            <small>{{ preview()!.totalRows }} satır, {{ preview()!.headers.length }} kolon</small>
+          </div>
+          <button class="btn btn--ghost btn--sm" (click)="reset()">Değiştir</button>
+        </div>
+
+        <h4>Kolon Önizleme</h4>
+        <div class="ti__preview-wrap">
+          <table class="ti__preview">
+            <thead>
+              <tr>
+                @for (h of preview()!.headers; track $index) {
+                  <th>{{ h || '(başlıksız)' }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of preview()!.sampleRows; track $index) {
+                <tr>
+                  @for (cell of row; track $index) {
+                    <td>{{ cell }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <div class="ti__actions">
+        <span></span>
+        <button class="btn btn--primary" (click)="goNext()" [disabled]="!preview()">
+          İleri <span class="material-icons">arrow_forward</span>
+        </button>
+      </div>
+    </section>
+  }
+
+  <!-- ─────────────────────── STEP 2 ─────────────────────── -->
+  @if (step() === 2 && preview(); as p) {
+    <section class="ti__panel">
+      <h3>Excel Kolonlarını SFS Panel Alanlarıyla Eşleştir</h3>
+      <p class="ti__hint">
+        <span class="material-icons">info</span>
+        Otomatik tahmin yapıldı, gerekirse her alan için doğru kolonu seç. Yıldızlı (*) alanlar zorunlu.
+      </p>
+
+      <div class="ti__mapper">
+        @for (target of TARGET_FIELDS; track target.key) {
+          <div class="ti__mapper-row">
+            <div class="ti__mapper-target">
+              <strong>{{ target.label }}</strong>
+              @if (target.required) { <span class="ti__req">*</span> }
+            </div>
+            <div class="ti__mapper-arrow">
+              <span class="material-icons">arrow_back</span>
+            </div>
+            <div class="ti__mapper-source">
+              <select
+                [ngModel]="mapping()[target.key]"
+                (ngModelChange)="setMappingFromEvent(target.key, $event)"
+              >
+                <option [ngValue]="null">— eşleştirme —</option>
+                @for (h of p.headers; track $index) {
+                  <option [ngValue]="$index">{{ h || '(kolon ' + ($index + 1) + ')' }}</option>
+                }
+              </select>
+              @if (mapping()[target.key] !== null) {
+                <small class="ti__sample">Örnek: <code>{{ sampleValueForColumn(mapping()[target.key]) }}</code></small>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="ti__actions">
+        <button class="btn btn--ghost" (click)="goBack()">
+          <span class="material-icons">arrow_back</span> Geri
+        </button>
+        <button class="btn btn--primary" (click)="goNext()" [disabled]="!canAdvanceFromStep2() || parsing()">
+          @if (parsing()) {
+            <span class="material-icons spin">refresh</span> Ayrıştırılıyor…
+          } @else {
+            İleri <span class="material-icons">arrow_forward</span>
+          }
+        </button>
+      </div>
+    </section>
+  }
+
+  <!-- ─────────────────────── STEP 3 ─────────────────────── -->
+  @if (step() === 3) {
+    <section class="ti__panel">
+      <h3>Önizleme ve Cari Onayı</h3>
+
+      <div class="ti__summary">
+        <div class="ti__stat ti__stat--ok">
+          <strong>{{ validRowCount() }}</strong>
+          <span>geçerli satır</span>
+        </div>
+        @if (invalidRowCount() > 0) {
+          <div class="ti__stat ti__stat--err">
+            <strong>{{ invalidRowCount() }}</strong>
+            <span>hatalı satır</span>
+          </div>
+        }
+        <div class="ti__stat">
+          <strong>{{ uniqueCariNames().length }}</strong>
+          <span>benzersiz cari</span>
+        </div>
+        <div class="ti__stat" [class.ti__stat--err]="unresolvedCount() > 0" [class.ti__stat--ok]="unresolvedCount() === 0">
+          <strong>{{ unresolvedCount() }}</strong>
+          <span>onay bekleyen cari</span>
+        </div>
+      </div>
+
+      <!-- Cari resolution -->
+      <h4>
+        Cari Eşleştirme
+        @if (unresolvedCount() > 0) {
+          <button class="btn btn--ghost btn--sm" (click)="bulkCreateAllMissing()">
+            Tümünü "Yeni Olarak Oluştur" işaretle
+          </button>
+        }
+      </h4>
+
+      @if (loadingCariler()) {
+        <div class="ti__loading"><span class="material-icons spin">refresh</span> Cariler yükleniyor…</div>
+      } @else {
+        <div class="ti__cari-table-wrap">
+          <table class="ti__cari-table">
+            <thead>
+              <tr>
+                <th>Cari Adı (dosyadaki)</th>
+                <th>Durum</th>
+                <th>Yeni Cari Adı (oluşturulacaksa)</th>
+                <th>Satır Sayısı</th>
+                <th>İşlem</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of cariResolutions(); track c.name) {
+                <tr [class.ti__row--missing]="!c.matchedId && !c.willCreate">
+                  <td>{{ c.name }}</td>
+                  <td>
+                    @if (c.matchedId) {
+                      <span class="badge badge--ok">✓ Eşleşti</span>
+                    } @else if (c.willCreate) {
+                      <span class="badge badge--info">+ Oluşturulacak</span>
+                    } @else {
+                      <span class="badge badge--warn">⚠ Eşleşmedi</span>
+                    }
+                  </td>
+                  <td>
+                    @if (!c.matchedId) {
+                      <input
+                        type="text"
+                        [value]="c.newPlaceholderName"
+                        (input)="setNewName(c.name, $any($event.target).value)"
+                        [disabled]="!c.willCreate"
+                        class="ti__input"
+                      />
+                    } @else {
+                      <span class="text-muted">—</span>
+                    }
+                  </td>
+                  <td class="num">{{ rowsForCari(c.name) }}</td>
+                  <td>
+                    @if (!c.matchedId) {
+                      <button
+                        class="btn btn--sm"
+                        [class.btn--primary]="!c.willCreate"
+                        [class.btn--outline]="c.willCreate"
+                        (click)="toggleCreateCari(c.name)"
+                      >
+                        {{ c.willCreate ? 'İptal Et' : 'Oluştur' }}
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <!-- Row preview (first 50) -->
+      <h4>Satır Önizleme (ilk 50)</h4>
+      <div class="ti__rows-wrap">
+        <table class="ti__rows">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Durum</th>
+              <th>Cari</th>
+              <th>Fatura No</th>
+              <th>Tarih</th>
+              <th>Vade</th>
+              <th class="num">Tutar</th>
+              <th>Status</th>
+              <th>Hatalar</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of parsedRows().slice(0, 50); track r.rowNumber) {
+              <tr [class.ti__row--err]="!r.isValid">
+                <td>{{ r.rowNumber }}</td>
+                <td>
+                  @if (r.isValid) {
+                    <span class="material-icons" style="color:#16a34a;font-size:18px">check</span>
+                  } @else {
+                    <span class="material-icons" style="color:#dc2626;font-size:18px">close</span>
+                  }
+                </td>
+                <td>{{ r.cariName }}</td>
+                <td><code>{{ r.invoiceNo || '—' }}</code></td>
+                <td>{{ r.invoiceDate ? (r.invoiceDate | turkishDate) : '—' }}</td>
+                <td>{{ r.dueDate ? (r.dueDate | turkishDate) : '—' }}</td>
+                <td class="num">{{ r.amount | currencyTry }}</td>
+                <td>{{ r.status }}</td>
+                <td class="ti__errs">
+                  @if (r.errors.length > 0) {
+                    <ul>@for (e of r.errors; track e) { <li>{{ e }}</li> }</ul>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        @if (parsedRows().length > 50) {
+          <p class="text-muted" style="padding:8px 12px">… ve {{ parsedRows().length - 50 }} satır daha</p>
+        }
+      </div>
+
+      <div class="ti__actions">
+        <button class="btn btn--ghost" (click)="goBack()">
+          <span class="material-icons">arrow_back</span> Geri
+        </button>
+        <button class="btn btn--primary" (click)="runImport()" [disabled]="!canImport()">
+          @if (importing()) {
+            <span class="material-icons spin">refresh</span> Yükleniyor…
+          } @else {
+            <span class="material-icons">cloud_done</span> {{ validRowCount() }} satırı yükle
+          }
+        </button>
+      </div>
+    </section>
+  }
+
+  <!-- ─────────────────────── STEP 4 ─────────────────────── -->
+  @if (step() === 4 && result(); as r) {
+    <section class="ti__panel">
+      <h3>İçe Aktarma Tamamlandı</h3>
+
+      <div class="ti__summary ti__summary--final">
+        <div class="ti__stat ti__stat--ok">
+          <strong>{{ r.inserted }}</strong>
+          <span>işlem oluşturuldu</span>
+        </div>
+        <div class="ti__stat">
+          <strong>{{ r.cariCreated }}</strong>
+          <span>yeni cari eklendi</span>
+        </div>
+        @if (r.duplicateInvoices > 0) {
+          <div class="ti__stat ti__stat--warn">
+            <strong>{{ r.duplicateInvoices }}</strong>
+            <span>yinelenen fatura no atlandı</span>
+          </div>
+        }
+        @if (r.failedRows > 0) {
+          <div class="ti__stat ti__stat--err">
+            <strong>{{ r.failedRows }}</strong>
+            <span>satır yüklenemedi</span>
+          </div>
+        }
+      </div>
+
+      @if (r.errors.length > 0) {
+        <details class="ti__errors-panel" open>
+          <summary>{{ r.errors.length }} hata</summary>
+          <ul>
+            @for (e of r.errors; track e) { <li>{{ e }}</li> }
+          </ul>
+        </details>
+      }
+
+      <div class="ti__actions">
+        <button class="btn btn--ghost" (click)="reset()">
+          <span class="material-icons">restart_alt</span> Yeni İçe Aktarma
+        </button>
+        <button class="btn btn--primary" (click)="goToList()">
+          <span class="material-icons">list</span> Ödeme Listesine Git
+        </button>
+      </div>
+    </section>
+  }
+
+}
