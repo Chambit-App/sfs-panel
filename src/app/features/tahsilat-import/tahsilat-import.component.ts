@@ -75,6 +75,9 @@ export class TahsilatImportComponent {
     cariName: null, amount: null, invoiceDate: null, dueDate: null,
     paymentTermDays: null, invoiceNo: null, status: null, description: null,
   });
+  aiSuggesting = signal(false);
+  aiReasoning = signal<Record<string, string> | null>(null);
+  aiError = signal<string | null>(null);
 
   // Step 3
   parsedRows = signal<ParsedTahsilatRow[]>([]);
@@ -166,6 +169,41 @@ export class TahsilatImportComponent {
       this.setMapping(field, null);
     } else {
       this.setMapping(field, Number(value));
+    }
+  }
+
+  async runAiSuggestion(): Promise<void> {
+    const p = this.preview();
+    if (!p) return;
+    this.aiSuggesting.set(true);
+    this.aiError.set(null);
+    this.aiReasoning.set(null);
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke('map-columns', {
+        body: {
+          headers: p.headers,
+          sampleRows: p.sampleRows,
+          targetFields: TARGET_FIELDS.map(f => ({ key: f.key, label: f.label, required: f.required })),
+        },
+      });
+      if (error) throw error;
+      if (!data?.mapping) throw new Error('Cevap geçersiz: mapping eksik');
+      const incoming = data.mapping as Record<string, number | null>;
+      const next: FieldMapping = { ...this.mapping() };
+      for (const f of TARGET_FIELDS) {
+        const v = incoming[f.key];
+        next[f.key] = v === null || v === undefined ? null : Number(v);
+      }
+      this.mapping.set(next);
+      this.aiReasoning.set(data.reasoning ?? null);
+      this.notify.success('Akıllı eşleştirme uygulandı.');
+    } catch (err) {
+      console.error(err);
+      const msg = (err as Error).message ?? 'Bilinmeyen hata';
+      this.aiError.set(msg);
+      this.notify.error('Akıllı eşleştirme başarısız: ' + msg);
+    } finally {
+      this.aiSuggesting.set(false);
     }
   }
 
