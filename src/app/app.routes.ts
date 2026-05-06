@@ -14,6 +14,7 @@ export const routes: Routes = [
       { path: 'payments/import', loadComponent: () => import('./features/excel-import/excel-import.component').then(m => m.ExcelImportComponent), data: { schemaKey: 'payments' } },
       { path: 'cari', loadComponent: () => import('./features/cari/cari.component').then(m => m.CariComponent) },
       { path: 'cari/import', loadComponent: () => import('./features/excel-import/excel-import.component').then(m => m.ExcelImportComponent), data: { schemaKey: 'cari' } },
+      { path: 'cari/tahsilat-import', loadComponent: () => import('./features/tahsilat-import/tahsilat-import.component').then(m => m.TahsilatImportComponent) },
       { path: 'bank', loadComponent: () => import('./features/bank/bank.component').then(m => m.BankComponent) },
       { path: 'bank/import', loadComponent: () => import('./features/excel-import/excel-import.component').then(m => m.ExcelImportComponent), data: { schemaKey: 'bank' } },
       { path: 'budget', loadComponent: () => import('./features/budget/budget.component').then(m => m.BudgetComponent) },

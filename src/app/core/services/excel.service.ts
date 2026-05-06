@@ -645,3 +645,204 @@ export function getSchemaByKey(key: string): EntitySchema | null {
       return null;
   }
 }
+
+// =============================================================================
+// Generic file reader & mapping-based parser (for muavin/tahsilat imports)
+// =============================================================================
+
+export interface GenericFilePreview {
+  headers: string[];
+  sampleRows: string[][];   // first 5 data rows, all values as strings
+  totalRows: number;        // total data row count (excludes header)
+}
+
+export interface FieldMapping {
+  cariName: number | null;        // column index for cari adı
+  amount: number | null;          // tutar
+  invoiceDate: number | null;     // fatura tarihi
+  dueDate: number | null;         // vade tarihi
+  paymentTermDays: number | null; // vade gün
+  invoiceNo: number | null;       // fatura no
+  status: number | null;          // durum
+  description: number | null;     // açıklama
+}
+
+export interface ParsedTahsilatRow {
+  rowNumber: number;
+  cariName: string;
+  amount: number;
+  invoiceDate: string;       // ISO yyyy-mm-dd
+  dueDate: string | null;
+  paymentTermDays: number;
+  invoiceNo: string;
+  status: 'BEKLIYOR' | 'ODENDI' | 'IPTAL';
+  description: string;
+  errors: string[];
+  isValid: boolean;
+}
+
+/**
+ * Read first sheet of an Excel/CSV without committing to a schema. Returns
+ * headers and first ~5 rows so the UI can show samples next to each column.
+ */
+export function buildGenericFilePreviewFromBuffer(buffer: ArrayBuffer): GenericFilePreview {
+  const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
+  const wsName = wb.SheetNames[0];
+  const ws = wb.Sheets[wsName];
+  const matrix = XLSX.utils.sheet_to_json<unknown[]>(ws, {
+    header: 1,
+    defval: '',
+    raw: false,
+  });
+  if (matrix.length === 0) return { headers: [], sampleRows: [], totalRows: 0 };
+  const headers = (matrix[0] as unknown[]).map(h => String(h ?? '').trim());
+  const dataRows = matrix.slice(1).filter(r => r.some(c => c !== '' && c !== null && c !== undefined));
+  const sampleRows = dataRows.slice(0, 5).map(r =>
+    Array.from({ length: headers.length }, (_, i) => formatCell(r[i])),
+  );
+  return { headers, sampleRows, totalRows: dataRows.length };
+}
+
+function formatCell(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  if (v instanceof Date) return v.toISOString().split('T')[0];
+  return String(v).trim();
+}
+
+/** Auto-suggest a field mapping by header text similarity (Turkish synonyms). */
+export function suggestFieldMapping(headers: string[]): FieldMapping {
+  const lower = headers.map(h => h.toLocaleLowerCase('tr'));
+  const findIdx = (patterns: string[]): number | null => {
+    for (const p of patterns) {
+      const i = lower.findIndex(h => h.includes(p));
+      if (i !== -1) return i;
+    }
+    return null;
+  };
+
+  return {
+    cariName: findIdx(['firma adı', 'firma', 'cari adı', 'cari', 'müşteri', 'tedarikçi', 'ünvan']),
+    amount: findIdx(['tahsil edilecek tutar', 'tahsil tutar', 'tutar', 'miktar', 'amount']),
+    invoiceDate: findIdx(['fat. tarihi', 'fatura tarihi', 'fat tarihi', 'tarih', 'date']),
+    dueDate: findIdx(['vade tarihi', 'vade tarih']),
+    paymentTermDays: findIdx(['vade/gün', 'vade gün', 'vade (gün)', 'gün']),
+    invoiceNo: findIdx(['fat.no', 'fat no', 'fatura no', 'fis no', 'fiş no', 'belge no']),
+    status: findIdx(['durumu', 'durum', 'status']),
+    description: findIdx(['açıklama', 'aciklama', 'description', 'not']),
+  };
+}
+
+/** Parse all rows according to a user-supplied mapping. */
+export async function parseTahsilatFile(
+  file: File,
+  mapping: FieldMapping,
+): Promise<ParsedTahsilatRow[]> {
+  const buffer = await file.arrayBuffer();
+  const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
+  const wsName = wb.SheetNames[0];
+  const ws = wb.Sheets[wsName];
+  const matrix = XLSX.utils.sheet_to_json<unknown[]>(ws, {
+    header: 1,
+    defval: '',
+    raw: false,
+  });
+  if (matrix.length < 2) return [];
+
+  const rows: ParsedTahsilatRow[] = [];
+  for (let r = 1; r < matrix.length; r++) {
+    const raw = matrix[r] as unknown[];
+    if (raw.every(c => c === '' || c === null || c === undefined)) continue;
+
+    const cariName = pickStringValue(raw, mapping.cariName).trim();
+    const amountStr = pickStringValue(raw, mapping.amount);
+    const invoiceDateStr = pickStringValue(raw, mapping.invoiceDate);
+    const dueDateStr = pickStringValue(raw, mapping.dueDate);
+    const paymentTermStr = pickStringValue(raw, mapping.paymentTermDays);
+    const invoiceNo = pickStringValue(raw, mapping.invoiceNo).trim();
+    const statusStr = pickStringValue(raw, mapping.status);
+    const description = pickStringValue(raw, mapping.description).trim();
+
+    const errors: string[] = [];
+
+    if (!cariName) errors.push('Cari adı boş');
+
+    const amount = parseTurkishNumber(amountStr);
+    if (amount === null) errors.push(`Tutar okunamadı: "${amountStr}"`);
+
+    const invoiceDate = parseTurkishDate(invoiceDateStr);
+    if (!invoiceDate) errors.push(`Fatura tarihi okunamadı: "${invoiceDateStr}"`);
+
+    const dueDate = dueDateStr ? parseTurkishDate(dueDateStr) : null;
+    const paymentTermDays = paymentTermStr ? Number(paymentTermStr.replace(/[^\d-]/g, '')) || 0 : 0;
+
+    let status: 'BEKLIYOR' | 'ODENDI' | 'IPTAL' = 'BEKLIYOR';
+    const norm = statusStr.toLocaleUpperCase('tr').replace(/[İI]/g, 'I');
+    if (norm.includes('ODENDI')) status = 'ODENDI';
+    else if (norm.includes('IPTAL')) status = 'IPTAL';
+    else if (norm.includes('ODENMEDI') || norm.trim() === '') status = 'BEKLIYOR';
+
+    rows.push({
+      rowNumber: r + 1,
+      cariName,
+      amount: amount ?? 0,
+      invoiceDate: invoiceDate ?? '',
+      dueDate,
+      paymentTermDays,
+      invoiceNo,
+      status,
+      description,
+      errors,
+      isValid: errors.length === 0,
+    });
+  }
+  return rows;
+}
+
+function pickStringValue(row: unknown[], idx: number | null): string {
+  if (idx === null || idx < 0 || idx >= row.length) return '';
+  const v = row[idx];
+  if (v === null || v === undefined) return '';
+  if (v instanceof Date) return v.toISOString().split('T')[0];
+  return String(v);
+}
+
+/** Parse a Turkish-formatted number: "1.234,56" or "?6.300,00" or "-?14.598,72". */
+function parseTurkishNumber(s: string): number | null {
+  if (!s) return null;
+  // Strip ₺/$/€ symbols and stray "?" chars from broken encoding
+  let cleaned = s.replace(/[₺$€?\s]/g, '').replace(/ /g, '').trim();
+  if (!cleaned) return null;
+  // Negative sign handling
+  let negative = false;
+  if (cleaned.startsWith('-')) {
+    negative = true;
+    cleaned = cleaned.slice(1);
+  }
+  // Turkish: "." as thousand sep, "," as decimal — convert to JS format
+  // If both ',' and '.' present, comma is decimal
+  if (cleaned.includes(',') && cleaned.includes('.')) {
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  } else if (cleaned.includes(',')) {
+    cleaned = cleaned.replace(',', '.');
+  }
+  const n = Number(cleaned);
+  if (!isFinite(n)) return null;
+  return negative ? -n : n;
+}
+
+/** Parse Turkish date: DD.MM.YYYY, D.M.YYYY, DD/MM/YYYY, or ISO YYYY-MM-DD. */
+function parseTurkishDate(s: string): string | null {
+  if (!s) return null;
+  s = s.trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.split('T')[0];
+  const m = s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/);
+  if (m) {
+    const yyyy = m[3];
+    const mm = m[2].padStart(2, '0');
+    const dd = m[1].padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+  return null;
+}

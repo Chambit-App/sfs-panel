@@ -61,6 +61,7 @@ export class SidebarComponent {
         { label: 'Ödemeler', path: '/payments', icon: 'payments' },
         { label: 'Cari Hesaplar', path: '/cari', icon: 'people' },
         { label: 'Banka', path: '/bank', icon: 'account_balance' },
+        { label: 'Toplu İşlem Yükle', path: '/cari/tahsilat-import', icon: 'upload_file' },
       ],
     },
     {
