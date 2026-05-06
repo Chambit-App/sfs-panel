@@ -115,6 +115,29 @@
         Otomatik tahmin yapıldı, gerekirse her alan için doğru kolonu seç. Yıldızlı (*) alanlar zorunlu.
       </p>
 
+      <div class="ti__ai-bar">
+        <button
+          class="btn btn--primary btn--ai"
+          (click)="runAiSuggestion()"
+          [disabled]="aiSuggesting()"
+        >
+          @if (aiSuggesting()) {
+            <span class="material-icons spin">refresh</span> Yapay Zeka Düşünüyor…
+          } @else {
+            <span class="material-icons">auto_awesome</span> Akıllı Eşleştirme (AI)
+          }
+        </button>
+        <small class="ti__ai-hint">
+          Kolonlar otomatik tahminle eşleşmediyse Claude'a sor. Sadece başlıklar ve birkaç örnek değer gönderilir.
+        </small>
+      </div>
+
+      @if (aiError()) {
+        <p class="ti__ai-error">
+          <span class="material-icons">error_outline</span> {{ aiError() }}
+        </p>
+      }
+
       <div class="ti__mapper">
         @for (target of TARGET_FIELDS; track target.key) {
           <div class="ti__mapper-row">
@@ -137,6 +160,11 @@
               </select>
               @if (mapping()[target.key] !== null) {
                 <small class="ti__sample">Örnek: <code>{{ sampleValueForColumn(mapping()[target.key]) }}</code></small>
+              }
+              @if (aiReasoning() && aiReasoning()![target.key]) {
+                <small class="ti__ai-reason">
+                  <span class="material-icons">auto_awesome</span> {{ aiReasoning()![target.key] }}
+                </small>
               }
             </div>
           </div>
